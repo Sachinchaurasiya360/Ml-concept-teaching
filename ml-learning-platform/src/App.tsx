@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Menu, Brain, GraduationCap } from "lucide-react";
 import Sidebar from "./components/Sidebar";
+import LandingPage from "./pages/LandingPage";
 
 // Level 1
 import L1_MachinesActivity from "./lessons/level1/L1_MachinesActivity";
@@ -85,6 +86,16 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   const crumb = BREADCRUMB_MAP[location.pathname];
+  const isLanding = location.pathname === "/";
+
+  // Landing page — full-width, no sidebar/navbar
+  if (isLanding) {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+      </Routes>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -140,7 +151,6 @@ export default function App() {
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-4 py-6">
             <Routes>
-              <Route path="/" element={<Navigate to="/level1/machines" replace />} />
               <Route path="/level1/machines" element={<L1_MachinesActivity />} />
               <Route path="/level1/computers" element={<L2_ComputersActivity />} />
               <Route path="/level1/data" element={<L3_DataActivity />} />
