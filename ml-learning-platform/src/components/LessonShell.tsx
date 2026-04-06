@@ -48,20 +48,22 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
   const nextPath = currentIdx < ALL_LESSONS.length - 1 ? ALL_LESSONS[currentIdx + 1] : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
       <div>
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+        <p className="font-hand text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Level {level} &middot; Lesson {lessonNumber}
         </p>
-        <h1 className="text-xl font-bold text-slate-800 mt-1">{title}</h1>
+        <h1 className="font-hand text-3xl sm:text-4xl font-bold text-foreground mt-1">
+          <span className="marker-highlight-yellow">{title}</span>
+        </h1>
       </div>
 
       {/* Story section */}
       {story}
 
       {/* Tab bar */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 overflow-x-auto">
+      <div className="flex gap-2 p-1.5 overflow-x-auto card-sketchy">
         {allTabs.map((tab) => (
           <button
             key={tab.id}
@@ -69,10 +71,10 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
               setActiveTab(tab.id);
               playClick();
             }}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-hand text-sm font-bold whitespace-nowrap transition-all border-2 ${
               activeTab === tab.id
-                ? "bg-white text-slate-800 shadow-sm"
-                : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                ? "bg-accent-yellow text-foreground border-foreground shadow-[2px_2px_0_#2b2a35]"
+                : "text-muted-foreground border-transparent hover:text-foreground hover:bg-accent-mint/30"
             }`}
           >
             {tab.icon}
@@ -87,8 +89,8 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
           <div className="space-y-4">
             <QuizCard questions={quiz} />
             {nextLessonHint && (
-              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
-                <p className="text-sm text-indigo-800 font-medium">{nextLessonHint}</p>
+              <div className="card-sketchy p-4 text-center" style={{ background: "#fff8e7" }}>
+                <p className="font-hand text-base text-foreground font-bold">{nextLessonHint}</p>
               </div>
             )}
           </div>
@@ -98,14 +100,14 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
       </div>
 
       {/* Previous / Next navigation */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex items-center justify-between pt-5 border-t-2 border-dashed border-foreground/30">
         {prevPath ? (
           <button
             onClick={() => { playClick(); navigate(prevPath); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+            className="btn-sketchy-outline text-sm"
           >
             <ChevronLeft className="w-4 h-4" />
-            Previous Lesson
+            Previous
           </button>
         ) : (
           <div />
@@ -113,14 +115,17 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
         {nextPath ? (
           <button
             onClick={() => { playClick(); navigate(nextPath); }}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            className="btn-sketchy text-sm"
           >
             Next Lesson
             <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
-          <div className="px-4 py-2.5 rounded-lg text-sm font-medium text-green-700 bg-green-50 border border-green-200">
-            You've completed all lessons!
+          <div
+            className="px-4 py-2.5 rounded-lg font-hand text-sm font-bold text-foreground border-2 border-foreground"
+            style={{ background: "var(--accent-mint)", boxShadow: "2px 2px 0 #2b2a35" }}
+          >
+            🎉 You've completed all lessons!
           </div>
         )}
       </div>

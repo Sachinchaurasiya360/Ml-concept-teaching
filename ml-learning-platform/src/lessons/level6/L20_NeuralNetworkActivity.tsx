@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Network, Layers, Target } from "lucide-react";
+import { Network, Layers, Target, Play, RotateCcw, Shuffle, Palette, Zap } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
@@ -24,6 +24,14 @@ function mulberry32(seed: number): () => number {
 /* ------------------------------------------------------------------ */
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+const INK = "#2b2a35";
+
+const THEMES = [
+  { name: "Coral",    in: "#6bb6ff", hidden: "#ff6b6b", out: "#4ecdc4", accent: "#ffd93d" },
+  { name: "Mint",     in: "#b18cf2", hidden: "#4ecdc4", out: "#ffd93d", accent: "#ff6b6b" },
+  { name: "Lavender", in: "#ffd93d", hidden: "#b18cf2", out: "#6bb6ff", accent: "#4ecdc4" },
+  { name: "Sunset",   in: "#4ecdc4", hidden: "#ffb88c", out: "#ff6b6b", accent: "#ffd93d" },
+];
 
 function initWeights(rng: () => number, inputSize: number, hiddenSize: number) {
   const wH: number[][] = [];
@@ -66,147 +74,263 @@ function forwardPass(
 /* ------------------------------------------------------------------ */
 
 function ArchitectureTab() {
-  const [hiddenCount, setHiddenCount] = useState(3);
+  const [hiddenCount, setHiddenCount] = useState(4);
   const [seed, setSeed] = useState(42);
-  const [animating, setAnimating] = useState(false);
-  const [activeEdges, setActiveEdges] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [themeIdx, setThemeIdx] = useState(0);
+  const [signalSpeed, setSignalSpeed] = useState(1.4);
+  const [inputs, setInputs] = useState([0.6, 0.4]);
+  const [showWeights, setShowWeights] = useState(false);
+  const [autoPulse, setAutoPulse] = useState(true);
 
+  const theme = THEMES[themeIdx];
   const rng = useMemo(() => mulberry32(seed), [seed]);
   const net = useMemo(() => initWeights(rng, 2, hiddenCount), [rng, hiddenCount]);
-  const inputs = [0.6, 0.4];
-  const result = useMemo(() => forwardPass(inputs, net.wH, net.bH, net.wO, net.bO), [net]);
-
-  const handleForward = useCallback(() => {
-    playClick();
-    setAnimating(true);
-    setActiveEdges(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setActiveEdges(true);
-      setAnimating(false);
-      playSuccess();
-    }, 800);
-  }, []);
+  const result = useMemo(() => forwardPass(inputs, net.wH, net.bH, net.wO, net.bO), [net, inputs]);
 
   const handleRandomize = useCallback(() => {
     playPop();
     setSeed((s) => s + 1);
-    setActiveEdges(false);
   }, []);
 
-  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
-
-  const W = 480, H = 240;
-  const inputX = 60, hiddenX = 240, outputX = 420;
-  const inputYs = [90, 150];
+  const W = 540, H = 280;
+  const inputX = 70, hiddenX = 270, outputX = 470;
+  const inputYs = [110, 170];
   const hiddenYs = Array.from({ length: hiddenCount }, (_, i) =>
-    40 + (i * (H - 80)) / Math.max(hiddenCount - 1, 1),
+    50 + (i * (H - 100)) / Math.max(hiddenCount - 1, 1),
   );
   const outputY = H / 2;
 
+  // Determine connection strength (for color intensity)
+  const maxAbsW = Math.max(
+    ...net.wH.flat().map(Math.abs),
+    ...net.wO.map(Math.abs),
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-600">
-          Hidden neurons: <span className="font-bold text-indigo-700">{hiddenCount}</span>
+    <div className="space-y-5">
+      {/* ---------- Toolbar ---------- */}
+      <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-4">
+        <div className="flex items-center gap-2">
+          <Palette className="w-4 h-4 text-foreground/60" />
+          <span className="font-hand text-sm font-bold">Theme:</span>
+          <div className="flex gap-1.5">
+            {THEMES.map((t, i) => (
+              <button
+                key={t.name}
+                onClick={() => { playClick(); setThemeIdx(i); }}
+                title={t.name}
+                className={`w-6 h-6 rounded-full border-2 transition-transform ${themeIdx === i ? "scale-125 border-foreground" : "border-foreground/30"}`}
+                style={{ background: `linear-gradient(135deg, ${t.in} 0%, ${t.hidden} 50%, ${t.out} 100%)` }}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-hand text-sm font-bold">Speed:</span>
+          <input
+            type="range" min={0.4} max={3} step={0.1} value={signalSpeed}
+            onChange={(e) => setSignalSpeed(parseFloat(e.target.value))}
+            className="w-24" style={{ accentColor: theme.hidden }}
+          />
+        </div>
+        <label className="flex items-center gap-1.5 font-hand text-sm font-bold cursor-pointer">
+          <input type="checkbox" checked={showWeights} onChange={(e) => setShowWeights(e.target.checked)} />
+          Show weights
+        </label>
+        <label className="flex items-center gap-1.5 font-hand text-sm font-bold cursor-pointer">
+          <input type="checkbox" checked={autoPulse} onChange={(e) => setAutoPulse(e.target.checked)} />
+          Pulse signals
+        </label>
+      </div>
+
+      {/* ---------- Hidden count ---------- */}
+      <div className="card-sketchy p-4" style={{ background: "#fff8e7" }}>
+        <label className="font-hand text-base font-bold flex justify-between items-center mb-2">
+          <span>Hidden neurons:</span>
+          <span className="px-3 py-0.5 rounded border-2 border-foreground bg-accent-yellow">{hiddenCount}</span>
         </label>
         <input
-          type="range" min={1} max={5} step={1} value={hiddenCount}
-          onChange={(e) => { playPop(); setHiddenCount(parseInt(e.target.value)); setActiveEdges(false); }}
-          className="w-full accent-indigo-600"
+          type="range" min={1} max={6} step={1} value={hiddenCount}
+          onChange={(e) => { playPop(); setHiddenCount(parseInt(e.target.value)); }}
+          className="w-full" style={{ accentColor: theme.hidden }}
         />
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[480px] mx-auto">
-        <defs>
-          <marker id="na-arrow" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
-            <path d="M0,0 L6,2.5 L0,5 Z" fill="#94a3b8" />
-          </marker>
-        </defs>
+      {/* ---------- The network ---------- */}
+      <div className="card-sketchy p-4 notebook-grid">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[600px] mx-auto">
+          <defs>
+            <radialGradient id="nn-in-grad" cx="35%" cy="30%">
+              <stop offset="0%" stopColor="#fff" />
+              <stop offset="100%" stopColor={theme.in} />
+            </radialGradient>
+            <radialGradient id="nn-h-grad" cx="35%" cy="30%">
+              <stop offset="0%" stopColor="#fff" />
+              <stop offset="100%" stopColor={theme.hidden} />
+            </radialGradient>
+            <radialGradient id="nn-out-grad" cx="35%" cy="30%">
+              <stop offset="0%" stopColor="#fff8a0" />
+              <stop offset="100%" stopColor={theme.out} />
+            </radialGradient>
+          </defs>
 
-        {/* Connections: input -> hidden */}
-        {inputYs.map((iy, ii) =>
-          hiddenYs.map((hy, hi) => (
-            <line
-              key={`ih-${ii}-${hi}`}
-              x1={inputX + 22} y1={iy} x2={hiddenX - 22} y2={hy}
-              stroke={activeEdges ? "#6366f1" : "#e2e8f0"}
-              strokeWidth={activeEdges ? 1.5 : 1}
-              className="transition-all duration-500"
-              markerEnd={activeEdges ? "url(#na-arrow)" : undefined}
+          {/* ---------- Connections: input → hidden ---------- */}
+          {inputYs.map((iy, ii) =>
+            hiddenYs.map((hy, hi) => {
+              const w = net.wH[hi][ii];
+              const intensity = Math.abs(w) / (maxAbsW || 1);
+              const positive = w >= 0;
+              return (
+                <g key={`ih-${ii}-${hi}`}>
+                  <line
+                    x1={inputX + 26} y1={iy} x2={hiddenX - 26} y2={hy}
+                    stroke={positive ? theme.hidden : "#ff6b6b"}
+                    strokeWidth={1 + intensity * 3}
+                    strokeOpacity={0.3 + intensity * 0.7}
+                    strokeLinecap="round"
+                    className={autoPulse ? "signal-flow" : ""}
+                    style={autoPulse ? { animationDuration: `${signalSpeed}s`, color: theme.hidden } : undefined}
+                  />
+                  {autoPulse && (
+                    <circle r={2.5 + intensity * 2} fill={theme.accent} stroke={INK} strokeWidth={0.8}>
+                      <animateMotion
+                        dur={`${signalSpeed}s`}
+                        repeatCount="indefinite"
+                        path={`M${inputX + 26},${iy} L${hiddenX - 26},${hy}`}
+                      />
+                    </circle>
+                  )}
+                  {showWeights && (
+                    <text
+                      x={(inputX + 26 + hiddenX - 26) / 2}
+                      y={(iy + hy) / 2 - 4}
+                      textAnchor="middle"
+                      className="text-[9px] font-bold"
+                      fill={INK} fontFamily="Kalam"
+                    >
+                      {w.toFixed(1)}
+                    </text>
+                  )}
+                </g>
+              );
+            }),
+          )}
+
+          {/* ---------- Connections: hidden → output ---------- */}
+          {hiddenYs.map((hy, hi) => {
+            const w = net.wO[hi];
+            const intensity = Math.abs(w) / (maxAbsW || 1);
+            const positive = w >= 0;
+            return (
+              <g key={`ho-${hi}`}>
+                <line
+                  x1={hiddenX + 26} y1={hy} x2={outputX - 26} y2={outputY}
+                  stroke={positive ? theme.out : "#ff6b6b"}
+                  strokeWidth={1 + intensity * 3}
+                  strokeOpacity={0.3 + intensity * 0.7}
+                  strokeLinecap="round"
+                  className={autoPulse ? "signal-flow" : ""}
+                  style={autoPulse ? { animationDuration: `${signalSpeed}s`, color: theme.out } : undefined}
+                />
+                {autoPulse && (
+                  <circle r={2.5 + intensity * 2} fill={theme.accent} stroke={INK} strokeWidth={0.8}>
+                    <animateMotion
+                      dur={`${signalSpeed}s`}
+                      repeatCount="indefinite"
+                      path={`M${hiddenX + 26},${hy} L${outputX - 26},${outputY}`}
+                    />
+                  </circle>
+                )}
+                {showWeights && (
+                  <text
+                    x={(hiddenX + 26 + outputX - 26) / 2}
+                    y={(hy + outputY) / 2 - 4}
+                    textAnchor="middle"
+                    className="text-[9px] font-bold"
+                    fill={INK} fontFamily="Kalam"
+                  >
+                    {w.toFixed(1)}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* ---------- Input nodes ---------- */}
+          {inputYs.map((y, i) => (
+            <g key={`in-${i}`}>
+              <circle cx={inputX} cy={y} r={26} fill="url(#nn-in-grad)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: theme.in }} />
+              <text x={inputX} y={y + 5} textAnchor="middle" className="text-[14px] font-bold" fill="#fff" fontFamily="Kalam">
+                {inputs[i].toFixed(1)}
+              </text>
+              <text x={inputX} y={y - 32} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">x{i + 1}</text>
+            </g>
+          ))}
+
+          {/* ---------- Hidden nodes ---------- */}
+          {hiddenYs.map((y, i) => {
+            const activation = result.hidden[i];
+            return (
+              <g key={`h-${i}`}>
+                {/* glow ring sized to activation */}
+                <circle cx={hiddenX} cy={y} r={24 + activation * 6} fill="none" stroke={theme.hidden} strokeWidth={2} opacity={0.3 + activation * 0.5} className="pulse-glow" style={{ color: theme.hidden }} />
+                <circle cx={hiddenX} cy={y} r={24} fill="url(#nn-h-grad)" stroke={INK} strokeWidth={2.5} />
+                <text x={hiddenX} y={y + 5} textAnchor="middle" className="text-[12px] font-bold" fill="#fff" fontFamily="Kalam">
+                  {activation.toFixed(2)}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* ---------- Output node ---------- */}
+          <g>
+            <circle cx={outputX} cy={outputY} r={32} fill="none" stroke={theme.out} strokeWidth={2.5} opacity={0.4} className="pulse-glow" style={{ color: theme.out }} />
+            <circle cx={outputX} cy={outputY} r={28} fill="url(#nn-out-grad)" stroke={INK} strokeWidth={2.5} />
+            <text x={outputX} y={outputY + 6} textAnchor="middle" className="text-[14px] font-bold" fill={INK} fontFamily="Kalam">
+              {result.output.toFixed(3)}
+            </text>
+          </g>
+
+          {/* ---------- Layer labels ---------- */}
+          <text x={inputX} y={28} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">INPUT</text>
+          <text x={hiddenX} y={28} textAnchor="middle" className="text-[12px] font-bold" fill={theme.hidden} fontFamily="Kalam">HIDDEN</text>
+          <text x={outputX} y={28} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">OUTPUT</text>
+        </svg>
+      </div>
+
+      {/* ---------- Input sliders ---------- */}
+      <div className="grid grid-cols-2 gap-3">
+        {inputs.map((v, i) => (
+          <div key={i} className="card-sketchy p-3 space-y-1.5">
+            <label className="font-hand text-sm font-bold flex justify-between">
+              <span>x{i + 1}</span>
+              <span className="px-2 py-0.5 rounded border-2 border-foreground text-xs" style={{ background: theme.in, color: "#fff" }}>{v.toFixed(2)}</span>
+            </label>
+            <input
+              type="range" min={0} max={1} step={0.01} value={v}
+              onChange={(e) => {
+                playPop();
+                const next = inputs.slice();
+                next[i] = parseFloat(e.target.value);
+                setInputs(next);
+              }}
+              className="w-full" style={{ accentColor: theme.in }}
             />
-          )),
-        )}
-
-        {/* Connections: hidden -> output */}
-        {hiddenYs.map((hy, hi) => (
-          <line
-            key={`ho-${hi}`}
-            x1={hiddenX + 22} y1={hy} x2={outputX - 22} y2={outputY}
-            stroke={activeEdges ? "#22c55e" : "#e2e8f0"}
-            strokeWidth={activeEdges ? 1.5 : 1}
-            className="transition-all duration-500"
-            markerEnd={activeEdges ? "url(#na-arrow)" : undefined}
-          />
+          </div>
         ))}
+      </div>
 
-        {/* Input nodes */}
-        {inputYs.map((y, i) => (
-          <g key={`in-${i}`}>
-            <circle cx={inputX} cy={y} r={20} fill="#3b82f6" opacity={0.15} />
-            <circle cx={inputX} cy={y} r={16} fill="#3b82f6" />
-            <text x={inputX} y={y + 4} textAnchor="middle" className="text-[11px] fill-white font-bold">
-              {inputs[i]}
-            </text>
-            <text x={inputX} y={y - 22} textAnchor="middle" className="text-[9px] fill-slate-400 font-medium">
-              x{i + 1}
-            </text>
-          </g>
-        ))}
-
-        {/* Hidden nodes */}
-        {hiddenYs.map((y, i) => (
-          <g key={`h-${i}`}>
-            <circle cx={hiddenX} cy={y} r={20} fill="#8b5cf6" opacity={0.15} />
-            <circle cx={hiddenX} cy={y} r={16} fill="#8b5cf6" />
-            <text x={hiddenX} y={y + 4} textAnchor="middle" className="text-[10px] fill-white font-bold">
-              {activeEdges ? result.hidden[i]?.toFixed(2) ?? "?" : "h" + (i + 1)}
-            </text>
-          </g>
-        ))}
-
-        {/* Output node */}
-        <circle cx={outputX} cy={outputY} r={22} fill={activeEdges ? "#22c55e" : "#94a3b8"} opacity={0.15} />
-        <circle cx={outputX} cy={outputY} r={18} fill={activeEdges ? "#22c55e" : "#94a3b8"} className="transition-all duration-500" />
-        <text x={outputX} y={outputY + 4} textAnchor="middle" className="text-[11px] fill-white font-bold">
-          {activeEdges ? result.output.toFixed(3) : "out"}
-        </text>
-
-        {/* Layer labels */}
-        <text x={inputX} y={20} textAnchor="middle" className="text-[9px] fill-slate-400 font-medium">INPUT</text>
-        <text x={hiddenX} y={20} textAnchor="middle" className="text-[9px] fill-purple-400 font-medium">HIDDEN</text>
-        <text x={outputX} y={20} textAnchor="middle" className="text-[9px] fill-slate-400 font-medium">OUTPUT</text>
-      </svg>
-
-      <div className="flex gap-2 justify-center">
-        <button
-          onClick={handleForward}
-          disabled={animating}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-all shadow-sm"
-        >
-          {animating ? "Computing..." : "Forward Pass"}
-        </button>
-        <button
-          onClick={handleRandomize}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
-        >
+      <div className="flex gap-3 justify-center">
+        <button onClick={handleRandomize} className="btn-sketchy text-sm">
+          <Shuffle className="w-4 h-4" />
           Randomize Weights
         </button>
       </div>
 
       <InfoBox variant="blue">
-        Click "Forward Pass" to see values flow from input through hidden neurons to the output. Each connection has a weight that multiplies the signal. Try different numbers of hidden neurons!
+        <span className="font-hand text-base">
+          🌐 Each line is a connection — thicker = stronger weight, red = negative. Watch the pulses race from inputs through hidden neurons to the output. Drag the input sliders and the whole network reacts live!
+        </span>
       </InfoBox>
     </div>
   );
@@ -218,11 +342,11 @@ function ArchitectureTab() {
 
 function LayerByLayerTab() {
   const [step, setStep] = useState(0); // 0=idle, 1=hidden, 2=output
+  const [inputs, setInputs] = useState([0.7, 0.3]);
 
   const rng = useMemo(() => mulberry32(99), []);
   const net = useMemo(() => initWeights(rng, 2, 3), [rng]);
-  const inputs = [0.7, 0.3];
-  const result = useMemo(() => forwardPass(inputs, net.wH, net.bH, net.wO, net.bO), [net]);
+  const result = useMemo(() => forwardPass(inputs, net.wH, net.bH, net.wO, net.bO), [net, inputs]);
 
   const handleStep = useCallback(() => {
     playClick();
@@ -235,26 +359,26 @@ function LayerByLayerTab() {
     setStep(0);
   }, []);
 
-  const W = 500, H = 200;
-  const inputX = 60, hiddenX = 250, outputX = 440;
-  const inputYs = [70, 130];
-  const hiddenYs = [50, 100, 150];
-  const outputY = 100;
+  const W = 560, H = 240;
+  const inputX = 70, hiddenX = 280, outputX = 480;
+  const inputYs = [90, 150];
+  const hiddenYs = [60, 120, 180];
+  const outputY = 120;
 
-  const highlightInput = step >= 1;
   const highlightHidden = step >= 1;
   const highlightOutput = step >= 2;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-center gap-3">
+    <div className="space-y-5">
+      {/* Step indicators */}
+      <div className="flex items-center justify-center gap-3 flex-wrap">
         {[1, 2].map((s) => (
           <div
             key={s}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+            className={`px-4 py-2 rounded-lg font-hand text-sm font-bold border-2 border-foreground transition-all ${
               step >= s
-                ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-white text-slate-400 border-slate-200"
+                ? "bg-accent-mint text-foreground shadow-[2px_2px_0_#2b2a35]"
+                : "bg-background text-muted-foreground"
             }`}
           >
             Step {s}: {s === 1 ? "Compute Hidden" : "Compute Output"}
@@ -262,111 +386,176 @@ function LayerByLayerTab() {
         ))}
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[500px] mx-auto">
-        {/* Connections input -> hidden */}
-        {inputYs.map((iy, ii) =>
-          hiddenYs.map((hy, hi) => (
-            <line
-              key={`ih-${ii}-${hi}`}
-              x1={inputX + 20} y1={iy} x2={hiddenX - 20} y2={hy}
-              stroke={highlightInput ? "#6366f1" : "#e2e8f0"}
-              strokeWidth={highlightInput ? 1.5 : 1}
-              className="transition-all duration-300"
+      {/* Input sliders */}
+      <div className="grid grid-cols-2 gap-3">
+        {inputs.map((v, i) => (
+          <div key={i} className="card-sketchy p-3 space-y-1.5">
+            <label className="font-hand text-sm font-bold flex justify-between">
+              <span>x{i + 1}</span>
+              <span className="px-2 py-0.5 rounded border-2 border-foreground text-xs bg-accent-sky text-white">{v.toFixed(2)}</span>
+            </label>
+            <input
+              type="range" min={0} max={1} step={0.01} value={v}
+              onChange={(e) => { playPop(); const next = inputs.slice(); next[i] = parseFloat(e.target.value); setInputs(next); }}
+              className="w-full" style={{ accentColor: "#6bb6ff" }}
             />
-          )),
-        )}
-        {/* Connections hidden -> output */}
-        {hiddenYs.map((hy, hi) => (
-          <line
-            key={`ho-${hi}`}
-            x1={hiddenX + 20} y1={hy} x2={outputX - 20} y2={outputY}
-            stroke={highlightOutput ? "#22c55e" : "#e2e8f0"}
-            strokeWidth={highlightOutput ? 1.5 : 1}
-            className="transition-all duration-300"
-          />
+          </div>
         ))}
+      </div>
 
-        {/* Input nodes */}
-        {inputYs.map((y, i) => (
-          <g key={`in-${i}`}>
-            <circle cx={inputX} cy={y} r={18} fill="#3b82f6" />
-            <text x={inputX} y={y + 4} textAnchor="middle" className="text-[11px] fill-white font-bold">{inputs[i]}</text>
-          </g>
-        ))}
+      <div className="card-sketchy p-3 notebook-grid">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[580px] mx-auto">
+          {/* Connections input -> hidden */}
+          {inputYs.map((iy, ii) =>
+            hiddenYs.map((hy, hi) => (
+              <g key={`ih-${ii}-${hi}`}>
+                <line
+                  x1={inputX + 24} y1={iy} x2={hiddenX - 24} y2={hy}
+                  stroke={highlightHidden ? "#b18cf2" : "#cbd5e1"}
+                  strokeWidth={highlightHidden ? 2.2 : 1.2}
+                  strokeLinecap="round"
+                  className={highlightHidden ? "signal-flow" : ""}
+                  style={highlightHidden ? { color: "#b18cf2" } : undefined}
+                />
+                {highlightHidden && (
+                  <circle r={3} fill="#ffd93d" stroke={INK} strokeWidth={0.8}>
+                    <animateMotion dur="1.2s" repeatCount="indefinite" path={`M${inputX + 24},${iy} L${hiddenX - 24},${hy}`} />
+                  </circle>
+                )}
+              </g>
+            )),
+          )}
 
-        {/* Hidden nodes */}
-        {hiddenYs.map((y, i) => (
-          <g key={`h-${i}`}>
-            <circle
-              cx={hiddenX} cy={y} r={18}
-              fill={highlightHidden ? "#8b5cf6" : "#cbd5e1"}
-              className="transition-all duration-300"
-            />
-            <text x={hiddenX} y={y + 4} textAnchor="middle" className="text-[10px] fill-white font-bold">
-              {highlightHidden ? result.hidden[i].toFixed(2) : "?"}
-            </text>
-            {highlightHidden && (
-              <text x={hiddenX} y={y + 32} textAnchor="middle" className="text-[8px] fill-slate-500">
-                raw: {result.hiddenRaw[i].toFixed(2)}
-              </text>
-            )}
-          </g>
-        ))}
-
-        {/* Output node */}
-        <circle
-          cx={outputX} cy={outputY} r={20}
-          fill={highlightOutput ? "#22c55e" : "#cbd5e1"}
-          className="transition-all duration-300"
-        />
-        <text x={outputX} y={outputY + 5} textAnchor="middle" className="text-[11px] fill-white font-bold">
-          {highlightOutput ? result.output.toFixed(3) : "?"}
-        </text>
-
-        {/* Layer labels */}
-        <text x={inputX} y={25} textAnchor="middle" className="text-[9px] fill-slate-400 font-medium">INPUT</text>
-        <text x={hiddenX} y={25} textAnchor="middle" className="text-[9px] fill-purple-400 font-medium">HIDDEN</text>
-        <text x={outputX} y={25} textAnchor="middle" className="text-[9px] fill-slate-400 font-medium">OUTPUT</text>
-      </svg>
-
-      {/* Explanation text */}
-      {step >= 1 && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs text-purple-800">
-          <span className="font-bold">Step 1:</span> Each hidden neuron computes a weighted sum of inputs + bias, then applies sigmoid.
-          {hiddenYs.map((_, i) => (
-            <div key={i} className="font-mono mt-1">
-              h{i + 1} = sigmoid({result.hiddenRaw[i].toFixed(2)}) = {result.hidden[i].toFixed(3)}
-            </div>
+          {/* Connections hidden -> output */}
+          {hiddenYs.map((hy, hi) => (
+            <g key={`ho-${hi}`}>
+              <line
+                x1={hiddenX + 24} y1={hy} x2={outputX - 24} y2={outputY}
+                stroke={highlightOutput ? "#4ecdc4" : "#cbd5e1"}
+                strokeWidth={highlightOutput ? 2.2 : 1.2}
+                strokeLinecap="round"
+                className={highlightOutput ? "signal-flow" : ""}
+                style={highlightOutput ? { color: "#4ecdc4" } : undefined}
+              />
+              {highlightOutput && (
+                <circle r={3} fill="#ffd93d" stroke={INK} strokeWidth={0.8}>
+                  <animateMotion dur="1.2s" repeatCount="indefinite" path={`M${hiddenX + 24},${hy} L${outputX - 24},${outputY}`} />
+                </circle>
+              )}
+            </g>
           ))}
+
+          {/* Input nodes */}
+          {inputYs.map((y, i) => (
+            <g key={`in-${i}`}>
+              <circle cx={inputX} cy={y} r={22} fill="#6bb6ff" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#6bb6ff" }} />
+              <text x={inputX} y={y + 5} textAnchor="middle" className="text-[13px] font-bold" fill="#fff" fontFamily="Kalam">
+                {inputs[i].toFixed(2)}
+              </text>
+            </g>
+          ))}
+
+          {/* Hidden nodes */}
+          {hiddenYs.map((y, i) => (
+            <g key={`h-${i}`}>
+              <circle
+                cx={hiddenX} cy={y} r={22}
+                fill={highlightHidden ? "#b18cf2" : "#f3efe6"}
+                stroke={INK} strokeWidth={2.5}
+                className={highlightHidden ? "pulse-glow" : ""}
+                style={highlightHidden ? { color: "#b18cf2" } : undefined}
+              />
+              <text x={hiddenX} y={y + 5} textAnchor="middle" className="text-[12px] font-bold" fill={highlightHidden ? "#fff" : INK} fontFamily="Kalam">
+                {highlightHidden ? result.hidden[i].toFixed(2) : "?"}
+              </text>
+              {highlightHidden && (
+                <text x={hiddenX} y={y + 38} textAnchor="middle" className="text-[10px]" fill={INK} fontFamily="Kalam">
+                  raw: {result.hiddenRaw[i].toFixed(2)}
+                </text>
+              )}
+            </g>
+          ))}
+
+          {/* Output node */}
+          <g>
+            {highlightOutput && (
+              <>
+                <circle cx={outputX} cy={outputY} r={32} fill="none" stroke="#4ecdc4" strokeWidth={2.5} className="fire-ring" />
+                <circle cx={outputX} cy={outputY} r={32} fill="none" stroke="#ffd93d" strokeWidth={2} className="fire-ring" style={{ animationDelay: "0.5s" }} />
+              </>
+            )}
+            <circle
+              cx={outputX} cy={outputY} r={26}
+              fill={highlightOutput ? "#4ecdc4" : "#f3efe6"}
+              stroke={INK} strokeWidth={2.5}
+              className={highlightOutput ? "pulse-glow" : ""}
+              style={highlightOutput ? { color: "#4ecdc4" } : undefined}
+            />
+            <text x={outputX} y={outputY + 6} textAnchor="middle" className="text-[13px] font-bold" fill={highlightOutput ? "#fff" : INK} fontFamily="Kalam">
+              {highlightOutput ? result.output.toFixed(3) : "?"}
+            </text>
+          </g>
+
+          {/* Layer labels */}
+          <text x={inputX} y={28} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">INPUT</text>
+          <text x={hiddenX} y={28} textAnchor="middle" className="text-[11px] font-bold" fill="#b18cf2" fontFamily="Kalam">HIDDEN</text>
+          <text x={outputX} y={28} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">OUTPUT</text>
+        </svg>
+      </div>
+
+      {/* Step explanations */}
+      {step >= 1 && (
+        <div className="card-sketchy p-4 animate-fadeIn" style={{ background: "#f0eaff" }}>
+          <div className="font-hand text-base font-bold mb-2">
+            <span className="marker-highlight-yellow">Step 1:</span> Hidden layer
+          </div>
+          <div className="font-hand text-sm text-foreground">
+            Each hidden neuron computes <b>weighted sum + bias</b>, then applies <b>sigmoid</b>:
+          </div>
+          <div className="mt-2 space-y-1">
+            {hiddenYs.map((_, i) => (
+              <div key={i} className="font-hand text-sm bg-background px-3 py-1 rounded border-2 border-foreground/30">
+                <span className="text-muted-foreground">h{i + 1} = sigmoid(</span>
+                <b>{result.hiddenRaw[i].toFixed(2)}</b>
+                <span className="text-muted-foreground">) = </span>
+                <span className="font-bold" style={{ color: "#b18cf2" }}>{result.hidden[i].toFixed(3)}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {step >= 2 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-xs text-green-800">
-          <span className="font-bold">Step 2:</span> The output neuron takes all hidden outputs, weights them, adds bias, applies sigmoid.
-          <div className="font-mono mt-1">
-            output = sigmoid({result.outRaw.toFixed(2)}) = {result.output.toFixed(4)}
+        <div className="card-sketchy p-4 animate-fadeIn" style={{ background: "#e0f7f5" }}>
+          <div className="font-hand text-base font-bold mb-2">
+            <span className="marker-highlight-mint">Step 2:</span> Output layer
+          </div>
+          <div className="font-hand text-sm text-foreground">
+            The output neuron weights all hidden values, adds bias, applies sigmoid:
+          </div>
+          <div className="mt-2 font-hand text-sm bg-background px-3 py-1 rounded border-2 border-foreground/30">
+            <span className="text-muted-foreground">output = sigmoid(</span>
+            <b>{result.outRaw.toFixed(2)}</b>
+            <span className="text-muted-foreground">) = </span>
+            <span className="font-bold text-base" style={{ color: "#4ecdc4" }}>{result.output.toFixed(4)}</span>
           </div>
         </div>
       )}
 
-      <div className="flex gap-2 justify-center">
-        <button
-          onClick={handleStep}
-          disabled={step >= 2}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-all shadow-sm"
-        >
+      <div className="flex gap-3 justify-center">
+        <button onClick={handleStep} disabled={step >= 2} className="btn-sketchy text-sm disabled:opacity-50">
+          <Play className="w-4 h-4" />
           {step === 0 ? "Step 1: Hidden Layer" : step === 1 ? "Step 2: Output" : "Done!"}
         </button>
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
-        >
+        <button onClick={handleReset} className="btn-sketchy-outline text-sm">
+          <RotateCcw className="w-4 h-4" />
           Reset
         </button>
       </div>
 
       <InfoBox variant="green">
-        A forward pass moves data layer by layer: first computing hidden activations, then the output. Each step transforms the data into a new representation.
+        <span className="font-hand text-base">
+          🪜 A forward pass moves data layer by layer. Click step by step and watch the signals light up — first the hidden layer, then the output (with celebration rings 🎉).
+        </span>
       </InfoBox>
     </div>
   );
@@ -391,6 +580,7 @@ function SolvingXORTab() {
   const [epoch, setEpoch] = useState(0);
   const [lossHistory, setLossHistory] = useState<number[]>([]);
   const [training, setTraining] = useState(false);
+  const [trainSpeed, setTrainSpeed] = useState(90);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const predict = useCallback(
@@ -406,15 +596,13 @@ function SolvingXORTab() {
     playClick();
     setTraining(true);
 
-    // We use pre-computed good weights and interpolate toward them
     const targetWH = [[5.5, 5.5], [7.2, 7.2]];
     const targetBH = [-2.5, -10.8];
     const targetWO = [10, -10.5];
     const targetBO = [-4.5];
-    const totalSteps = 40;
+    const totalSteps = 50;
     let currentStep = 0;
 
-    // Capture starting weights
     const startWH = wH.map((r) => [...r]);
     const startBH = [...bH];
     const startWO = [...wO];
@@ -428,11 +616,9 @@ function SolvingXORTab() {
       }
       currentStep++;
       const t = currentStep / totalSteps;
-      const ease = t * t * (3 - 2 * t); // smoothstep
+      const ease = t * t * (3 - 2 * t);
 
-      const newWH = startWH.map((row, j) =>
-        row.map((w, i) => w + (targetWH[j][i] - w) * ease),
-      );
+      const newWH = startWH.map((row, j) => row.map((w, i) => w + (targetWH[j][i] - w) * ease));
       const newBH = startBH.map((b, j) => b + (targetBH[j] - b) * ease);
       const newWO = startWO.map((w, j) => w + (targetWO[j] - w) * ease);
       const newBO = startBO.map((b, j) => b + (targetBO[j] - b) * ease);
@@ -443,7 +629,6 @@ function SolvingXORTab() {
       setBO(newBO);
       setEpoch((e) => e + 1);
 
-      // Compute loss with new weights
       let loss = 0;
       for (const [x1, x2, target] of XOR_DATA) {
         const h0 = sigmoid(newWH[0][0] * x1 + newWH[0][1] * x2 + newBH[0]);
@@ -453,10 +638,10 @@ function SolvingXORTab() {
       }
       setLossHistory((prev) => [...prev, loss / XOR_DATA.length]);
 
-      timerRef.current = setTimeout(tick, 100);
+      timerRef.current = setTimeout(tick, trainSpeed);
     };
     tick();
-  }, [wH, bH, wO, bO]);
+  }, [wH, bH, wO, bO, trainSpeed]);
 
   const handleReset = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -472,10 +657,9 @@ function SolvingXORTab() {
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  // Decision boundary heatmap
-  const plotSize = 180;
-  const pad = 25;
-  const gridRes = 25;
+  const plotSize = 240;
+  const pad = 30;
+  const gridRes = 32;
   const cellW = (plotSize - 2 * pad) / gridRes;
 
   const cells = useMemo(() => {
@@ -490,27 +674,43 @@ function SolvingXORTab() {
     return result;
   }, [predict]);
 
+  // Sketchy palette: coral → yellow → mint
   const colorForVal = (v: number) => {
     const t = Math.max(0, Math.min(1, v));
-    const r = Math.round(239 + (34 - 239) * t);
-    const g = Math.round(68 + (197 - 68) * t);
-    const b = Math.round(68 + (94 - 68) * t);
-    return `rgb(${r},${g},${b})`;
+    if (t < 0.5) {
+      const k = t / 0.5;
+      const r = 255;
+      const g = Math.round(107 + (217 - 107) * k);
+      const b = Math.round(107 + (61 - 107) * k);
+      return `rgb(${r},${g},${b})`;
+    } else {
+      const k = (t - 0.5) / 0.5;
+      const r = Math.round(255 + (78 - 255) * k);
+      const g = Math.round(217 + (205 - 217) * k);
+      const b = Math.round(61 + (196 - 61) * k);
+      return `rgb(${r},${g},${b})`;
+    }
   };
 
+  const accuracy = XOR_DATA.filter(([x1, x2, t]) => (predict(x1, x2) >= 0.5 ? 1 : 0) === t).length / XOR_DATA.length;
+
   // Loss curve
-  const lossW = 180, lossH = 100, lossPad = 20;
+  const lossW = 280, lossH = 130, lossPad = 28;
 
   return (
-    <div className="space-y-4">
-      <div className="text-center text-sm font-semibold text-slate-700">
-        Neural Network solving XOR (2 inputs, 2 hidden, 1 output)
+    <div className="space-y-5">
+      <div className="text-center font-hand text-2xl font-bold">
+        <span className="marker-highlight-mint">Neural Network</span> solving XOR
+      </div>
+      <div className="text-center font-hand text-sm text-muted-foreground">
+        2 inputs → 2 hidden → 1 output
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+      <div className="grid md:grid-cols-2 gap-5">
         {/* Decision boundary heatmap */}
-        <div>
-          <svg viewBox={`0 0 ${plotSize} ${plotSize}`} className="w-44 h-44">
+        <div className="card-sketchy p-3">
+          <div className="font-hand text-sm font-bold text-center mb-2">Decision Boundary</div>
+          <svg viewBox={`0 0 ${plotSize} ${plotSize}`} className="w-full max-w-[280px] mx-auto">
             {cells.map((c, i) => (
               <rect
                 key={i}
@@ -521,70 +721,91 @@ function SolvingXORTab() {
                 fill={colorForVal(c.val)}
               />
             ))}
-            <rect x={pad} y={pad} width={plotSize - 2 * pad} height={plotSize - 2 * pad} fill="none" stroke="#cbd5e1" />
-            {/* XOR data points */}
+            <rect x={pad} y={pad} width={plotSize - 2 * pad} height={plotSize - 2 * pad} fill="none" stroke={INK} strokeWidth={2.5} rx={4} />
+            {/* XOR data points with pulsing halos */}
             {XOR_DATA.map(([x1, x2, t], i) => {
               const sx = pad + ((x1 + 0.2) / 1.4) * (plotSize - 2 * pad);
               const sy = plotSize - pad - ((x2 + 0.2) / 1.4) * (plotSize - 2 * pad);
+              const correct = (predict(x1, x2) >= 0.5 ? 1 : 0) === t;
               return (
-                <circle
-                  key={i}
-                  cx={sx} cy={sy} r={7}
-                  fill={t === 1 ? "#22c55e" : "#ef4444"}
-                  stroke="white" strokeWidth={2}
-                />
+                <g key={i}>
+                  {correct && (
+                    <circle cx={sx} cy={sy} r={14} fill="none" stroke={t === 1 ? "#4ecdc4" : "#ff6b6b"} strokeWidth={2} opacity={0.5} className="pulse-glow" style={{ color: t === 1 ? "#4ecdc4" : "#ff6b6b" }} />
+                  )}
+                  <circle cx={sx} cy={sy} r={11} fill={t === 1 ? "#4ecdc4" : "#ff6b6b"} stroke={INK} strokeWidth={2.5} />
+                  <text x={sx} y={sy + 4} textAnchor="middle" className="text-[10px] font-bold" fill="#fff" fontFamily="Kalam">{t}</text>
+                </g>
               );
             })}
-            <text x={plotSize / 2} y={plotSize - 5} textAnchor="middle" className="text-[8px] fill-slate-500">x1</text>
-            <text x={6} y={plotSize / 2} textAnchor="middle" className="text-[8px] fill-slate-500" transform={`rotate(-90 6 ${plotSize / 2})`}>x2</text>
+            <text x={plotSize / 2} y={plotSize - 10} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">x1</text>
+            <text x={12} y={plotSize / 2} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam" transform={`rotate(-90 12 ${plotSize / 2})`}>x2</text>
           </svg>
-          <p className="text-center text-[10px] text-slate-500 mt-1">Decision Boundary</p>
         </div>
 
         {/* Loss curve */}
-        <div>
-          <svg viewBox={`0 0 ${lossW} ${lossH}`} className="w-44 h-24">
-            <rect x={lossPad} y={5} width={lossW - 2 * lossPad} height={lossH - lossPad - 5} fill="#f8fafc" stroke="#e2e8f0" rx={3} />
+        <div className="card-sketchy p-3">
+          <div className="font-hand text-sm font-bold text-center mb-2">Loss over Epochs</div>
+          <svg viewBox={`0 0 ${lossW} ${lossH}`} className="w-full max-w-[300px] mx-auto">
+            <defs>
+              <pattern id="loss-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke={INK} strokeOpacity="0.08" strokeWidth="1" />
+              </pattern>
+            </defs>
+            <rect x={lossPad} y={10} width={lossW - 2 * lossPad} height={lossH - lossPad - 10} fill="#fffdf5" stroke={INK} strokeWidth={2} rx={4} />
+            <rect x={lossPad} y={10} width={lossW - 2 * lossPad} height={lossH - lossPad - 10} fill="url(#loss-grid)" />
+
             {lossHistory.length > 1 && (() => {
               const maxLoss = Math.max(...lossHistory, 0.01);
               const pts = lossHistory.map((l, i) => {
-                const x = lossPad + (i / (lossHistory.length - 1)) * (lossW - 2 * lossPad);
-                const y = lossH - lossPad - (l / maxLoss) * (lossH - lossPad - 10);
+                const x = lossPad + (i / Math.max(lossHistory.length - 1, 1)) * (lossW - 2 * lossPad);
+                const y = lossH - lossPad - (l / maxLoss) * (lossH - lossPad - 20);
                 return `${x.toFixed(1)},${y.toFixed(1)}`;
               });
-              return <polyline points={pts.join(" ")} fill="none" stroke="#ef4444" strokeWidth={1.5} />;
+              return (
+                <>
+                  {/* glow underlay */}
+                  <polyline points={pts.join(" ")} fill="none" stroke="#ff6b6b" strokeWidth={6} opacity={0.3} strokeLinecap="round" strokeLinejoin="round" />
+                  <polyline points={pts.join(" ")} fill="none" stroke="#ff6b6b" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Latest point dot */}
+                  {(() => {
+                    const i = lossHistory.length - 1;
+                    const x = lossPad + (i / Math.max(lossHistory.length - 1, 1)) * (lossW - 2 * lossPad);
+                    const y = lossH - lossPad - (lossHistory[i] / maxLoss) * (lossH - lossPad - 20);
+                    return <circle cx={x} cy={y} r={5} fill="#ffd93d" stroke={INK} strokeWidth={2} className="pulse-glow" style={{ color: "#ffd93d" }} />;
+                  })()}
+                </>
+              );
             })()}
-            <text x={lossW / 2} y={lossH - 2} textAnchor="middle" className="text-[8px] fill-slate-500">Epoch</text>
-            <text x={8} y={lossH / 2} textAnchor="middle" className="text-[8px] fill-slate-500" transform={`rotate(-90 8 ${lossH / 2})`}>Loss</text>
+
+            <text x={lossW / 2} y={lossH - 6} textAnchor="middle" className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">Epoch</text>
+            <text x={10} y={lossH / 2} textAnchor="middle" className="text-[10px] font-bold" fill={INK} fontFamily="Kalam" transform={`rotate(-90 10 ${lossH / 2})`}>Loss</text>
           </svg>
-          <p className="text-center text-[10px] text-slate-500 mt-1">Loss Curve</p>
         </div>
       </div>
 
-      {/* Predictions */}
-      <div className="bg-white border border-slate-200 rounded-lg overflow-hidden mx-auto" style={{ maxWidth: 300 }}>
-        <table className="text-xs w-full">
+      {/* Predictions table */}
+      <div className="card-sketchy overflow-hidden max-w-md mx-auto">
+        <table className="w-full font-hand text-sm">
           <thead>
-            <tr className="bg-slate-50">
-              <th className="px-3 py-1.5 text-slate-600">x1</th>
-              <th className="px-3 py-1.5 text-slate-600">x2</th>
-              <th className="px-3 py-1.5 text-slate-600">Target</th>
-              <th className="px-3 py-1.5 text-slate-600">Output</th>
+            <tr className="bg-accent-yellow border-b-2 border-foreground">
+              <th className="px-3 py-2">x1</th>
+              <th className="px-3 py-2">x2</th>
+              <th className="px-3 py-2">Target</th>
+              <th className="px-3 py-2">Output</th>
             </tr>
           </thead>
           <tbody>
             {XOR_DATA.map(([x1, x2, t], i) => {
               const out = predict(x1, x2);
               const rounded = out >= 0.5 ? 1 : 0;
+              const ok = rounded === t;
               return (
-                <tr key={i} className="border-t border-slate-100">
-                  <td className="px-3 py-1.5 text-center font-mono">{x1}</td>
-                  <td className="px-3 py-1.5 text-center font-mono">{x2}</td>
-                  <td className="px-3 py-1.5 text-center font-mono font-bold">{t}</td>
-                  <td className={`px-3 py-1.5 text-center font-mono font-bold ${
-                    rounded === t ? "text-green-600" : "text-red-500"
-                  }`}>
-                    {out.toFixed(3)}
+                <tr key={i} className="border-t-2 border-dashed border-foreground/30">
+                  <td className="px-3 py-2 text-center font-bold">{x1}</td>
+                  <td className="px-3 py-2 text-center font-bold">{x2}</td>
+                  <td className="px-3 py-2 text-center font-bold">{t}</td>
+                  <td className={`px-3 py-2 text-center font-bold ${ok ? "text-emerald-600" : "text-red-500"}`}>
+                    {out.toFixed(3)} {ok ? "✓" : "✗"}
                   </td>
                 </tr>
               );
@@ -593,29 +814,48 @@ function SolvingXORTab() {
         </table>
       </div>
 
-      <div className="text-center text-xs text-slate-500 font-mono">
-        Epoch: {epoch}
-        {lossHistory.length > 0 && ` | Loss: ${lossHistory[lossHistory.length - 1].toFixed(4)}`}
+      {/* Stats */}
+      <div className="card-sketchy p-3 max-w-md mx-auto" style={{ background: "#fff8e7" }}>
+        <div className="flex flex-wrap gap-2 justify-center font-hand text-xs mb-2">
+          <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-lav text-white">epoch <b>{epoch}</b></span>
+          {lossHistory.length > 0 && (
+            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-background">loss <b>{lossHistory[lossHistory.length - 1].toFixed(4)}</b></span>
+          )}
+        </div>
+        <div className="h-3 rounded-full border-2 border-foreground bg-background overflow-hidden">
+          <div className="h-full transition-all duration-300" style={{ width: `${accuracy * 100}%`, background: accuracy === 1 ? "#4ecdc4" : "#ffd93d" }} />
+        </div>
+        <div className="text-center font-hand text-xs mt-1">{Math.round(accuracy * 100)}% accuracy</div>
+        {accuracy === 1 && epoch > 0 && (
+          <div className="text-center font-hand text-base font-bold marker-highlight-mint mt-1">
+            🎉 XOR solved!
+          </div>
+        )}
       </div>
 
-      <div className="flex gap-2 justify-center">
-        <button
-          onClick={handleTrain}
-          disabled={training}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-green-600 text-white hover:bg-green-700 disabled:opacity-40 transition-all shadow-sm"
-        >
-          {training ? "Training..." : "Train Network"}
+      {/* Train speed */}
+      <div className="card-sketchy p-3 max-w-md mx-auto">
+        <label className="font-hand text-xs font-bold flex justify-between">
+          <span>Train Speed</span><span>{trainSpeed}ms</span>
+        </label>
+        <input type="range" min={30} max={300} step={10} value={trainSpeed} onChange={(e) => setTrainSpeed(parseInt(e.target.value))} className="w-full" style={{ accentColor: "#4ecdc4" }} />
+      </div>
+
+      <div className="flex gap-3 justify-center">
+        <button onClick={handleTrain} disabled={training} className="btn-sketchy text-sm disabled:opacity-50">
+          <Zap className="w-4 h-4" />
+          {training ? "Training…" : "Train Network"}
         </button>
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 rounded-lg text-sm font-semibold bg-slate-200 text-slate-700 hover:bg-slate-300 transition-all"
-        >
+        <button onClick={handleReset} className="btn-sketchy-outline text-sm">
+          <RotateCcw className="w-4 h-4" />
           Reset
         </button>
       </div>
 
       <InfoBox variant="indigo" title="XOR Solved!">
-        A multi-layer network can solve XOR because the hidden layer transforms the data into a new space where it becomes linearly separable. Watch the decision boundary curve as training progresses!
+        <span className="font-hand text-base">
+          🧠 A multi-layer network solves XOR because the hidden layer transforms the data into a new space where it becomes linearly separable. Watch the decision boundary morph and the loss curve plummet during training!
+        </span>
       </InfoBox>
     </div>
   );

@@ -23,10 +23,7 @@ const LEVEL_CARDS = [
     title: "What Are Machines & Data?",
     desc: "Start from the very basics \u2014 what machines do, how computers think in 0s and 1s, and what data really means.",
     icon: <Cpu className="w-6 h-6" />,
-    color: "from-blue-500 to-cyan-500",
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    text: "text-blue-700",
+    accent: "var(--accent-sky)",
     lessons: 3,
     path: "/level1/machines",
   },
@@ -35,10 +32,7 @@ const LEVEL_CARDS = [
     title: "Seeing Patterns in Data",
     desc: "Learn to plot data on graphs, spot trends and clusters, and sort information like a computer.",
     icon: <Axis3D className="w-6 h-6" />,
-    color: "from-emerald-500 to-teal-500",
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    text: "text-emerald-700",
+    accent: "var(--accent-mint)",
     lessons: 3,
     path: "/level2/coordinates",
   },
@@ -47,10 +41,7 @@ const LEVEL_CARDS = [
     title: "From Patterns to Predictions",
     desc: "Make predictions from data, draw the best-fit line, and understand what algorithms are.",
     icon: <Sparkles className="w-6 h-6" />,
-    color: "from-violet-500 to-purple-500",
-    bg: "bg-violet-50",
-    border: "border-violet-200",
-    text: "text-violet-700",
+    accent: "var(--accent-lav)",
     lessons: 4,
     path: "/level3/predictions",
   },
@@ -59,10 +50,7 @@ const LEVEL_CARDS = [
     title: "Introduction to ML",
     desc: "Dive into supervised learning, K-Nearest Neighbors, decision trees, and how to measure model success.",
     icon: <Target className="w-6 h-6" />,
-    color: "from-orange-500 to-amber-500",
-    bg: "bg-orange-50",
-    border: "border-orange-200",
-    text: "text-orange-700",
+    accent: "var(--accent-yellow)",
     lessons: 4,
     path: "/level4/supervised-learning",
   },
@@ -71,10 +59,7 @@ const LEVEL_CARDS = [
     title: "Unsupervised Learning",
     desc: "Discover how machines find hidden groups in data without labels using K-Means clustering.",
     icon: <Layers className="w-6 h-6" />,
-    color: "from-pink-500 to-rose-500",
-    bg: "bg-pink-50",
-    border: "border-pink-200",
-    text: "text-pink-700",
+    accent: "var(--accent-coral)",
     lessons: 3,
     path: "/level5/unsupervised-learning",
   },
@@ -83,10 +68,7 @@ const LEVEL_CARDS = [
     title: "Neural Networks",
     desc: "Build neurons, stack them into layers, and learn how backpropagation teaches a network.",
     icon: <Zap className="w-6 h-6" />,
-    color: "from-indigo-500 to-blue-500",
-    bg: "bg-indigo-50",
-    border: "border-indigo-200",
-    text: "text-indigo-700",
+    accent: "var(--accent-sky)",
     lessons: 4,
     path: "/level6/perceptron",
   },
@@ -95,10 +77,7 @@ const LEVEL_CARDS = [
     title: "Training & Optimization",
     desc: "Master gradient descent, learning rates, overfitting, and the difference between SGD and batch training.",
     icon: <TrendingDown className="w-6 h-6" />,
-    color: "from-red-500 to-orange-500",
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-700",
+    accent: "var(--accent-coral)",
     lessons: 4,
     path: "/level7/gradient-descent",
   },
@@ -107,10 +86,7 @@ const LEVEL_CARDS = [
     title: "Computer Vision & CNNs",
     desc: "See how computers see \u2014 pixels, filters, convolution, pooling, and build a mini CNN from scratch.",
     icon: <ImageIcon className="w-6 h-6" />,
-    color: "from-slate-600 to-slate-800",
-    bg: "bg-slate-50",
-    border: "border-slate-300",
-    text: "text-slate-700",
+    accent: "var(--accent-lav)",
     lessons: 4,
     path: "/level8/images-as-data",
   },
@@ -118,24 +94,28 @@ const LEVEL_CARDS = [
 
 const FEATURES = [
   {
-    icon: <Play className="w-5 h-5 text-indigo-600" />,
+    icon: <Play className="w-5 h-5" />,
     title: "Fully Interactive",
     desc: "Every lesson has hands-on SVG activities \u2014 click, drag, and explore concepts visually.",
+    accent: "var(--accent-coral)",
   },
   {
-    icon: <BookOpen className="w-5 h-5 text-amber-600" />,
+    icon: <BookOpen className="w-5 h-5" />,
     title: "Story-Driven",
     desc: "Follow Aru & her robot friend Byte as they discover ML concepts through real-world adventures.",
+    accent: "var(--accent-yellow)",
   },
   {
-    icon: <Users className="w-5 h-5 text-emerald-600" />,
+    icon: <Users className="w-5 h-5" />,
     title: "Beginner Friendly",
     desc: "Starts from \"What is a machine?\" \u2014 no coding or math prerequisites needed.",
+    accent: "var(--accent-mint)",
   },
   {
-    icon: <Star className="w-5 h-5 text-pink-600" />,
+    icon: <Star className="w-5 h-5" />,
     title: "Quiz Challenges",
     desc: "Test your understanding with quizzes at the end of every lesson.",
+    accent: "var(--accent-lav)",
   },
 ];
 
@@ -143,70 +123,49 @@ export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
-      {/* Hero */}
-      <header className="relative overflow-hidden">
-        {/* Animated background dots */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <svg className="absolute top-0 left-0 w-full h-full opacity-[0.04]" viewBox="0 0 800 600">
-            {Array.from({ length: 40 }, (_, i) => (
-              <circle
-                key={i}
-                cx={50 + (i % 10) * 80}
-                cy={40 + Math.floor(i / 10) * 140}
-                r={3 + (i % 5) * 2}
-                fill="currentColor"
-                className="text-indigo-600"
-              />
-            ))}
-            {/* Connection lines */}
-            {Array.from({ length: 20 }, (_, i) => {
-              const x1 = 50 + (i % 10) * 80;
-              const y1 = 40 + Math.floor(i / 10) * 140;
-              const x2 = 50 + ((i + 1) % 10) * 80;
-              const y2 = 40 + Math.floor((i + 1) / 10) * 140;
-              return (
-                <line
-                  key={`l-${i}`}
-                  x1={x1} y1={y1} x2={x2} y2={y2}
-                  stroke="currentColor"
-                  strokeWidth={0.5}
-                  className="text-indigo-400"
-                />
-              );
-            })}
-          </svg>
+    <div className="min-h-screen bg-[#fdfbf6] text-[#2b2a35]">
+      {/* ---------- Hero ---------- */}
+      <header className="relative overflow-hidden notebook-grid">
+        {/* Floating doodle accents */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-[6%] top-[14%] text-5xl animate-float" style={{ color: "var(--accent-yellow)" }}>★</div>
+          <div className="absolute right-[8%] top-[18%] text-4xl animate-float float-delay-1" style={{ color: "var(--accent-coral)" }}>✦</div>
+          <div className="absolute left-[12%] bottom-[18%] text-4xl animate-float float-delay-2" style={{ color: "var(--accent-mint)" }}>✿</div>
+          <div className="absolute right-[14%] bottom-[22%] text-3xl animate-wiggle" style={{ color: "var(--accent-lav)" }}>✎</div>
+          <div className="absolute left-[45%] top-[8%] text-2xl animate-wiggle" style={{ color: "var(--accent-sky)" }}>✺</div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 pt-12 pb-16 sm:pt-20 sm:pb-24 text-center relative">
+        <div className="max-w-5xl mx-auto px-4 pt-16 pb-20 sm:pt-24 sm:pb-28 text-center relative">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-full text-xs font-semibold text-indigo-700 mb-6">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6 border-2 border-[#2b2a35]"
+            style={{ background: "var(--accent-yellow)", boxShadow: "2px 2px 0 #2b2a35" }}
+          >
             <Brain className="w-3.5 h-3.5" />
             29 Interactive Lessons &middot; 8 Levels
           </div>
 
           {/* Title */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
+          <div className="mb-4 text-6xl">🐼</div>
+          <h1 className="font-hand text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
             Learn Machine Learning
             <br />
-            <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              From Scratch
-            </span>
+            <span className="marker-highlight-yellow">From Scratch</span>
           </h1>
 
-          <p className="mt-5 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-6 text-lg sm:text-xl text-[#6b6776] max-w-2xl mx-auto leading-relaxed">
             A hands-on interactive journey from &ldquo;What is a machine?&rdquo; all the way to
             building neural networks and CNNs. No prior knowledge needed &mdash; just curiosity.
           </p>
 
           {/* CTA buttons */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={() => {
                 playClick();
                 navigate("/level1/machines");
               }}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition-all hover:shadow-xl hover:shadow-indigo-300 hover:-translate-y-0.5"
+              className="btn-sketchy text-lg"
             >
               <Play className="w-4 h-4" />
               Start Learning
@@ -214,7 +173,7 @@ export default function LandingPage() {
             <a
               href="#levels"
               onClick={() => playClick()}
-              className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl border border-slate-200 transition-colors"
+              className="btn-sketchy-outline text-lg"
             >
               <BookOpen className="w-4 h-4" />
               Browse Curriculum
@@ -222,88 +181,74 @@ export default function LandingPage() {
           </div>
 
           {/* Hero visual — mini neural network SVG */}
-          <div className="mt-12 flex justify-center">
+          <div className="mt-14 flex justify-center">
             <svg viewBox="0 0 400 160" className="w-full max-w-md">
-              {/* Input layer */}
               {[40, 80, 120].map((y, i) => (
                 <g key={`in-${i}`}>
-                  <circle cx={60} cy={y} r={14} fill="#e0e7ff" stroke="#6366f1" strokeWidth={2} />
-                  <text x={60} y={y + 4} textAnchor="middle" className="text-[10px] fill-indigo-600 font-bold">
+                  <circle cx={60} cy={y} r={15} fill="#fff3a0" stroke="#2b2a35" strokeWidth={2.5} />
+                  <text x={60} y={y + 4} textAnchor="middle" className="text-[11px] font-bold" fill="#2b2a35" fontFamily="Kalam">
                     {["x1", "x2", "x3"][i]}
                   </text>
                 </g>
               ))}
-              {/* Hidden layer */}
               {[50, 90, 130].map((y, i) => (
                 <g key={`h-${i}`}>
-                  <circle cx={200} cy={y} r={14} fill="#fae8ff" stroke="#a855f7" strokeWidth={2} />
-                  <text x={200} y={y + 4} textAnchor="middle" className="text-[10px] fill-purple-600 font-bold">
+                  <circle cx={200} cy={y} r={15} fill="#d6c2ff" stroke="#2b2a35" strokeWidth={2.5} />
+                  <text x={200} y={y + 4} textAnchor="middle" className="text-[11px] font-bold" fill="#2b2a35" fontFamily="Kalam">
                     {["h1", "h2", "h3"][i]}
                   </text>
                 </g>
               ))}
-              {/* Output */}
-              <circle cx={340} cy={80} r={16} fill="#dcfce7" stroke="#22c55e" strokeWidth={2} />
-              <text x={340} y={84} textAnchor="middle" className="text-[10px] fill-green-700 font-bold">
+              <circle cx={340} cy={80} r={17} fill="#a8e8e3" stroke="#2b2a35" strokeWidth={2.5} />
+              <text x={340} y={84} textAnchor="middle" className="text-[12px] font-bold" fill="#2b2a35" fontFamily="Kalam">
                 y
               </text>
-              {/* Connections input→hidden */}
               {[40, 80, 120].map((y1) =>
                 [50, 90, 130].map((y2) => (
-                  <line
-                    key={`c1-${y1}-${y2}`}
-                    x1={74} y1={y1} x2={186} y2={y2}
-                    stroke="#c7d2fe" strokeWidth={1.5}
-                  />
+                  <line key={`c1-${y1}-${y2}`} x1={75} y1={y1} x2={185} y2={y2} stroke="#2b2a35" strokeWidth={1.2} strokeDasharray="3 2" />
                 ))
               )}
-              {/* Connections hidden→output */}
               {[50, 90, 130].map((y) => (
-                <line
-                  key={`c2-${y}`}
-                  x1={214} y1={y} x2={324} y2={80}
-                  stroke="#d8b4fe" strokeWidth={1.5}
-                />
+                <line key={`c2-${y}`} x1={215} y1={y} x2={323} y2={80} stroke="#2b2a35" strokeWidth={1.2} strokeDasharray="3 2" />
               ))}
-              {/* Layer labels */}
-              <text x={60} y={152} textAnchor="middle" className="text-[9px] fill-slate-500 font-medium">Input</text>
-              <text x={200} y={152} textAnchor="middle" className="text-[9px] fill-slate-500 font-medium">Hidden</text>
-              <text x={340} y={152} textAnchor="middle" className="text-[9px] fill-slate-500 font-medium">Output</text>
+              <text x={60} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Input</text>
+              <text x={200} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Hidden</text>
+              <text x={340} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Output</text>
             </svg>
           </div>
         </div>
       </header>
 
-      {/* Features row */}
-      <section className="max-w-5xl mx-auto px-4 pb-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ---------- Features row ---------- */}
+      <section className="max-w-5xl mx-auto px-4 pb-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center mb-3">
+            <div key={f.title} className="card-sketchy p-5 hover:-translate-y-1 transition-transform">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 border-2 border-[#2b2a35]"
+                style={{ background: f.accent }}
+              >
                 {f.icon}
               </div>
-              <h3 className="text-sm font-bold text-slate-800">{f.title}</h3>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">{f.desc}</p>
+              <h3 className="font-hand text-xl font-bold text-[#2b2a35]">{f.title}</h3>
+              <p className="text-sm text-[#6b6776] mt-1 leading-relaxed">{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Levels grid */}
-      <section id="levels" className="max-w-5xl mx-auto px-4 pb-20">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Your Learning Path
+      {/* ---------- Levels grid ---------- */}
+      <section id="levels" className="max-w-5xl mx-auto px-4 pb-24">
+        <div className="text-center mb-12">
+          <h2 className="font-hand text-4xl sm:text-5xl font-bold text-[#2b2a35]">
+            Your Learning <span className="marker-highlight-mint">Path</span>
           </h2>
-          <p className="text-sm text-slate-500 mt-2">
+          <p className="text-[#6b6776] mt-3 text-lg">
             8 levels &middot; 29 lessons &middot; From absolute beginner to building CNNs
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {LEVEL_CARDS.map((card) => (
             <button
               key={card.level}
@@ -311,26 +256,27 @@ export default function LandingPage() {
                 playClick();
                 navigate(card.path);
               }}
-              className={`group text-left ${card.bg} border ${card.border} rounded-xl p-5 hover:shadow-lg transition-all hover:-translate-y-0.5`}
+              className="group card-sketchy text-left p-6 hover:-translate-y-1 transition-transform"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-lg bg-gradient-to-br ${card.color} text-white flex items-center justify-center shadow-sm`}
+                    className="w-12 h-12 rounded-xl flex items-center justify-center border-2 border-[#2b2a35]"
+                    style={{ background: card.accent, boxShadow: "2px 2px 0 #2b2a35" }}
                   >
                     {card.icon}
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <p className="text-[10px] font-bold text-[#6b6776] uppercase tracking-wider font-hand">
                       Level {card.level}
                     </p>
-                    <h3 className={`text-sm font-bold ${card.text}`}>{card.title}</h3>
+                    <h3 className="font-hand text-xl font-bold text-[#2b2a35]">{card.title}</h3>
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors mt-1" />
+                <ChevronRight className="w-5 h-5 text-[#2b2a35]/40 group-hover:text-[#2b2a35] transition-colors mt-1" />
               </div>
-              <p className="text-xs text-slate-600 mt-3 leading-relaxed">{card.desc}</p>
-              <div className="mt-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              <p className="text-sm text-[#6b6776] mt-3 leading-relaxed">{card.desc}</p>
+              <div className="mt-3 text-[10px] font-bold text-[#6b6776] uppercase tracking-wider font-hand">
                 {card.lessons} lessons
               </div>
             </button>
@@ -338,30 +284,38 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Meet the characters */}
-      <section className="max-w-3xl mx-auto px-4 pb-20">
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 sm:p-8">
-          <h2 className="text-lg font-bold text-slate-800 text-center mb-4">Meet Your Guides</h2>
+      {/* ---------- Meet the characters ---------- */}
+      <section className="max-w-3xl mx-auto px-4 pb-24">
+        <div className="card-sketchy p-7 sm:p-9" style={{ background: "#fff8e7" }}>
+          <h2 className="font-hand text-3xl font-bold text-[#2b2a35] text-center mb-6">
+            Meet Your <span className="marker-highlight-coral">Guides</span>
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="flex gap-3 items-start">
-              <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center shrink-0">
-                <span className="text-xl">&#128567;</span>
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2b2a35]"
+                style={{ background: "var(--accent-coral)" }}
+              >
+                <span className="text-2xl">😻</span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-pink-700">Aru</h3>
-                <p className="text-xs text-slate-600 leading-relaxed mt-0.5">
+                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Aru</h3>
+                <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
                   A curious 12-year-old who loves asking &ldquo;why?&rdquo; &mdash; she discovers ML concepts through
                   everyday adventures like packing for trips, finding lost dogs, and predicting rain.
                 </p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
-                <span className="text-xl">&#129302;</span>
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2b2a35]"
+                style={{ background: "var(--accent-sky)" }}
+              >
+                <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h3 className="text-sm font-bold text-indigo-700">Byte</h3>
-                <p className="text-xs text-slate-600 leading-relaxed mt-0.5">
+                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Byte</h3>
+                <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
                   Aru&apos;s friendly robot companion who explains how computers think, learn, and see the world &mdash;
                   one step at a time.
                 </p>
@@ -371,11 +325,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer CTA */}
-      <section className="bg-gradient-to-r from-indigo-600 to-purple-600 py-12">
+      {/* ---------- Footer CTA ---------- */}
+      <section className="py-16 notebook-grid border-y-2 border-[#2b2a35]">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-xl sm:text-2xl font-bold text-white">Ready to begin?</h2>
-          <p className="text-indigo-200 text-sm mt-2">
+          <h2 className="font-hand text-4xl font-bold text-[#2b2a35]">Ready to begin?</h2>
+          <p className="text-[#6b6776] text-lg mt-3">
             Start from the very first lesson and work your way up. It&apos;s free and fun!
           </p>
           <button
@@ -383,7 +337,7 @@ export default function LandingPage() {
               playClick();
               navigate("/level1/machines");
             }}
-            className="mt-6 inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-700 font-semibold rounded-xl hover:bg-indigo-50 transition-colors shadow-lg"
+            className="btn-sketchy mt-8 text-lg"
           >
             <Play className="w-4 h-4" />
             Start Level 1
@@ -391,14 +345,14 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 py-6">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-slate-400 text-xs">
-            <Brain className="w-4 h-4" />
-            <span className="font-semibold">ML Learning Path</span>
+      {/* ---------- Footer ---------- */}
+      <footer className="py-8 bg-[#2b2a35]">
+        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[#fdfbf6]">
+            <Brain className="w-5 h-5" style={{ color: "var(--accent-yellow)" }} />
+            <span className="font-hand text-xl font-bold">ML Learning Path</span>
           </div>
-          <p className="text-slate-500 text-[10px]">
+          <p className="text-[#fdfbf6]/60 text-xs font-hand">
             From Machines to Machine Learning &middot; 29 Interactive Lessons
           </p>
         </div>

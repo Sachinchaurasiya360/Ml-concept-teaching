@@ -98,7 +98,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-[#fdfbf6]">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -108,39 +108,38 @@ export default function App() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navbar */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200 px-4 py-2.5 flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-[#fdfbf6]/90 backdrop-blur border-b-2 border-[#2b2a35] px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => {
-              // On mobile, open the sidebar overlay. On desktop, toggle collapse.
               if (window.innerWidth < 1024) {
                 setSidebarOpen(true);
               } else {
                 setSidebarCollapsed((c) => !c);
               }
             }}
-            className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[#ffd93d]/40 transition-colors border-2 border-transparent hover:border-[#2b2a35]"
           >
-            <Menu className="w-5 h-5 text-slate-700" />
+            <Menu className="w-5 h-5 text-[#2b2a35]" />
           </button>
 
-          {/* Brand (visible when sidebar is collapsed on desktop) */}
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 text-indigo-500 hidden lg:block" />
-            <span className="text-sm font-bold text-slate-800 hidden lg:block">ML Learning Path</span>
+            <Brain className="w-5 h-5 hidden lg:block" style={{ color: "var(--accent-coral)" }} />
+            <span className="font-hand text-xl font-bold text-[#2b2a35] hidden lg:block">ML Learning Path</span>
           </div>
 
-          {/* Breadcrumb */}
           {crumb && (
-            <div className="flex items-center gap-1.5 ml-auto text-xs">
-              <span className="text-slate-400 font-medium">{crumb.level}</span>
-              <span className="text-slate-300">/</span>
-              <span className="text-slate-700 font-semibold">{crumb.lesson}</span>
+            <div className="flex items-center gap-1.5 ml-auto font-hand">
+              <span className="text-[#6b6776] text-sm">{crumb.level}</span>
+              <span className="text-[#6b6776]/50">/</span>
+              <span className="text-[#2b2a35] font-bold text-sm">{crumb.lesson}</span>
             </div>
           )}
 
-          {/* Right side */}
           <div className={`flex items-center gap-2 ${crumb ? "" : "ml-auto"}`}>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-semibold uppercase tracking-wide">
+            <div
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border-2 border-[#2b2a35] font-hand"
+              style={{ background: "var(--accent-yellow)", boxShadow: "2px 2px 0 #2b2a35" }}
+            >
               <GraduationCap className="w-3.5 h-3.5" />
               29 Lessons
             </div>

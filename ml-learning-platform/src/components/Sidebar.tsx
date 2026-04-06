@@ -164,25 +164,25 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
       )}
 
       <aside
-        className={`fixed top-0 left-0 z-50 h-full bg-white border-r border-slate-200 overflow-y-auto transition-all duration-300 lg:static lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full bg-background border-r-2 border-foreground overflow-y-auto transition-all duration-300 lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "w-16" : "w-72"}`}
       >
         {/* Logo + collapse toggle */}
-        <div className={`p-4 border-b border-slate-200 flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
+        <div className={`p-4 border-b-2 border-foreground flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
           {!collapsed && (
             <div>
-              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-                <Brain className="w-5 h-5 text-indigo-500 shrink-0" />
-                ML Learning Path
+              <h2 className="font-hand text-2xl font-bold text-foreground flex items-center gap-2">
+                <Brain className="w-6 h-6 text-accent-coral shrink-0" />
+                ML Path
               </h2>
-              <p className="text-[10px] text-slate-500 mt-1">From Machines to Machine Learning</p>
+              <p className="text-[11px] text-muted-foreground mt-1 font-hand">From Machines to Machine Learning</p>
             </div>
           )}
-          {collapsed && <Brain className="w-5 h-5 text-indigo-500" />}
+          {collapsed && <Brain className="w-6 h-6 text-accent-coral" />}
           <button
             onClick={onToggleCollapse}
-            className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
+            className="hidden lg:flex p-1.5 rounded-lg hover:bg-accent-yellow/40 text-foreground/60 hover:text-foreground transition-colors shrink-0 border-2 border-transparent hover:border-foreground"
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? <ChevronsRight className="w-4 h-4" /> : <ChevronsLeft className="w-4 h-4" />}
@@ -197,17 +197,16 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
 
             return (
               <div key={level.level}>
-                {/* Level header — collapsible toggle */}
                 {!collapsed ? (
                   <button
                     onClick={() => toggleLevel(idx)}
-                    className={`w-full flex items-center justify-between px-2 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                    className={`w-full flex items-center justify-between px-2 py-2 rounded-lg font-hand transition-colors ${
                       hasActivePage
-                        ? "text-indigo-700 bg-indigo-50/50"
-                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                        ? "text-foreground bg-accent-yellow/40"
+                        : "text-muted-foreground hover:bg-accent-yellow/20 hover:text-foreground"
                     }`}
                   >
-                    <span className="uppercase tracking-wider text-[10px]">
+                    <span className="uppercase tracking-wider text-[11px] font-bold">
                       Level {level.level}: {level.title}
                     </span>
                     {isExpanded ? (
@@ -217,12 +216,11 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                     )}
                   </button>
                 ) : (
-                  <div className="text-[9px] font-bold text-slate-400 text-center mb-1 mt-2">L{level.level}</div>
+                  <div className="text-[10px] font-bold text-muted-foreground text-center mb-1 mt-2 font-hand">L{level.level}</div>
                 )}
 
-                {/* Lessons — shown when expanded (or always in collapsed mode) */}
                 {(isExpanded || collapsed) && (
-                  <div className={`space-y-0.5 ${!collapsed ? "mt-1 ml-1 border-l-2 border-slate-100 pl-2" : ""}`}>
+                  <div className={`space-y-0.5 ${!collapsed ? "mt-1 ml-1 border-l-2 border-dashed border-foreground/20 pl-2" : ""}`}>
                     {level.lessons.map((lesson) => (
                       <NavLink
                         key={lesson.path}
@@ -230,12 +228,12 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
                         onClick={onClose}
                         title={collapsed ? lesson.label : undefined}
                         className={({ isActive }) =>
-                          `flex items-center rounded-lg text-xs font-medium transition-colors ${
+                          `flex items-center rounded-lg text-sm font-hand transition-all ${
                             collapsed ? "justify-center px-0 py-2.5" : "gap-2 px-2.5 py-2"
                           } ${
                             isActive
-                              ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                              ? "bg-accent-coral text-background border-2 border-foreground font-bold shadow-[2px_2px_0_#2b2a35]"
+                              : "text-foreground/80 hover:bg-accent-mint/30 hover:text-foreground"
                           }`
                         }
                       >

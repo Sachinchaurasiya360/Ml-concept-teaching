@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
-import { Activity, TrendingUp, Sliders } from "lucide-react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { Activity, TrendingUp, Sliders, Play, RotateCcw } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
@@ -13,42 +13,55 @@ const step = (x: number) => (x >= 0 ? 1 : 0);
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
 const tanh_ = (x: number) => Math.tanh(x);
 const relu = (x: number) => Math.max(0, x);
+const leakyRelu = (x: number) => (x >= 0 ? x : 0.1 * x);
 
-type AFn = { name: string; fn: (x: number) => number; color: string; range: [number, number] };
+type AFn = {
+  name: string;
+  fn: (x: number) => number;
+  color: string;
+  glow: string;
+  range: [number, number];
+  emoji: string;
+  formula: string;
+};
 
 const activationFns: AFn[] = [
-  { name: "Step", fn: step, color: "#ef4444", range: [-0.2, 1.2] },
-  { name: "Sigmoid", fn: sigmoid, color: "#3b82f6", range: [-0.1, 1.1] },
-  { name: "Tanh", fn: tanh_, color: "#8b5cf6", range: [-1.2, 1.2] },
-  { name: "ReLU", fn: relu, color: "#22c55e", range: [-1, 5.5] },
+  { name: "Step",       fn: step,      color: "#ff6b6b", glow: "#ff8a8a", range: [-0.2, 1.2], emoji: "🚦", formula: "1 if x≥0 else 0" },
+  { name: "Sigmoid",    fn: sigmoid,   color: "#6bb6ff", glow: "#94caff", range: [-0.1, 1.1], emoji: "〰️", formula: "1 / (1 + e^-x)" },
+  { name: "Tanh",       fn: tanh_,     color: "#b18cf2", glow: "#c9adf7", range: [-1.2, 1.2], emoji: "🌊", formula: "tanh(x)" },
+  { name: "ReLU",       fn: relu,      color: "#4ecdc4", glow: "#7ee0d8", range: [-1, 5.5],   emoji: "📐", formula: "max(0, x)" },
+  { name: "LeakyReLU",  fn: leakyRelu, color: "#ffb88c", glow: "#ffd0b3", range: [-1, 5.5],   emoji: "💧", formula: "x if x≥0 else 0.1x" },
 ];
 
+const INK = "#2b2a35";
+
 /* ------------------------------------------------------------------ */
-/*  Shared SVG mini-chart                                              */
+/*  Sketchy mini-chart                                                 */
 /* ------------------------------------------------------------------ */
 
-const CHART_W = 220;
-const CHART_H = 140;
-const CHART_PAD = 28;
+const CHART_W = 240;
+const CHART_H = 160;
+const CHART_PAD = 30;
 
 function MiniChart({
   af,
   inputVal,
   showCursor,
+  highlighted,
 }: {
   af: AFn;
   inputVal: number;
   showCursor: boolean;
+  highlighted: boolean;
 }) {
   const xMin = -5, xMax = 5;
   const [yMin, yMax] = af.range;
   const toSX = (v: number) => CHART_PAD + ((v - xMin) / (xMax - xMin)) * (CHART_W - 2 * CHART_PAD);
   const toSY = (v: number) => CHART_H - CHART_PAD - ((v - yMin) / (yMax - yMin)) * (CHART_H - 2 * CHART_PAD);
 
-  // Build path
   const points: string[] = [];
-  for (let px = 0; px <= 80; px++) {
-    const x = xMin + (px / 80) * (xMax - xMin);
+  for (let px = 0; px <= 120; px++) {
+    const x = xMin + (px / 120) * (xMax - xMin);
     const y = af.fn(x);
     const clampedY = Math.max(yMin, Math.min(yMax, y));
     points.push(`${toSX(x).toFixed(1)},${toSY(clampedY).toFixed(1)}`);
@@ -61,30 +74,53 @@ function MiniChart({
 
   return (
     <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} className="w-full">
+      <defs>
+        <pattern id={`grid-${af.name}`} width="14" height="14" patternUnits="userSpaceOnUse">
+          <path d="M 14 0 L 0 0 0 14" fill="none" stroke={INK} strokeOpacity="0.08" strokeWidth="1" />
+        </pattern>
+      </defs>
+
       {/* Background */}
-      <rect x={CHART_PAD} y={CHART_PAD - 10} width={CHART_W - 2 * CHART_PAD} height={CHART_H - 2 * CHART_PAD + 10} fill="#f8fafc" stroke="#e2e8f0" rx={4} />
+      <rect
+        x={CHART_PAD} y={CHART_PAD - 10}
+        width={CHART_W - 2 * CHART_PAD} height={CHART_H - 2 * CHART_PAD + 10}
+        fill="#fffdf5" stroke={INK} strokeWidth={2} rx={4}
+      />
+      <rect
+        x={CHART_PAD} y={CHART_PAD - 10}
+        width={CHART_W - 2 * CHART_PAD} height={CHART_H - 2 * CHART_PAD + 10}
+        fill={`url(#grid-${af.name})`}
+      />
+
       {/* Zero lines */}
-      <line x1={toSX(0)} y1={CHART_PAD - 10} x2={toSX(0)} y2={CHART_H - CHART_PAD} stroke="#cbd5e1" strokeWidth={0.5} />
-      <line x1={CHART_PAD} y1={toSY(0)} x2={CHART_W - CHART_PAD} y2={toSY(0)} stroke="#cbd5e1" strokeWidth={0.5} />
+      <line x1={toSX(0)} y1={CHART_PAD - 10} x2={toSX(0)} y2={CHART_H - CHART_PAD} stroke={INK} strokeWidth={1} strokeDasharray="2 3" opacity={0.4} />
+      <line x1={CHART_PAD} y1={toSY(0)} x2={CHART_W - CHART_PAD} y2={toSY(0)} stroke={INK} strokeWidth={1} strokeDasharray="2 3" opacity={0.4} />
+
+      {/* Glow halo */}
+      <path d={pathD} fill="none" stroke={af.glow} strokeWidth={6} strokeLinecap="round" opacity={highlighted ? 0.6 : 0.3} />
       {/* Function curve */}
-      <path d={pathD} fill="none" stroke={af.color} strokeWidth={2.5} strokeLinecap="round" />
-      {/* Input cursor */}
+      <path d={pathD} fill="none" stroke={af.color} strokeWidth={3} strokeLinecap="round" />
+
+      {/* Cursor */}
       {showCursor && (
         <>
-          <line x1={cursorX} y1={CHART_PAD - 10} x2={cursorX} y2={CHART_H - CHART_PAD} stroke="#94a3b8" strokeWidth={1} strokeDasharray="3 2" />
-          <circle cx={cursorX} cy={cursorY} r={5} fill={af.color} stroke="white" strokeWidth={2} />
-          <text x={cursorX} y={cursorY - 10} textAnchor="middle" className="text-[9px] fill-slate-700 font-bold">
+          <line x1={cursorX} y1={CHART_PAD - 10} x2={cursorX} y2={CHART_H - CHART_PAD} stroke={INK} strokeWidth={1.5} strokeDasharray="3 2" />
+          <circle cx={cursorX} cy={cursorY} r={9} fill={af.glow} opacity={0.5} className="pulse-glow" style={{ color: af.color }} />
+          <circle cx={cursorX} cy={cursorY} r={5.5} fill={af.color} stroke={INK} strokeWidth={2} />
+          <text x={cursorX} y={cursorY - 12} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">
             {outVal.toFixed(2)}
           </text>
         </>
       )}
+
       {/* Title */}
-      <text x={CHART_W / 2} y={14} textAnchor="middle" className="text-[11px] font-bold" fill={af.color}>
-        {af.name}
+      <text x={CHART_W / 2} y={16} textAnchor="middle" className="text-[13px] font-bold" fill={af.color} fontFamily="Kalam">
+        {af.emoji} {af.name}
       </text>
+
       {/* Axis labels */}
-      <text x={CHART_W - CHART_PAD + 4} y={toSY(0) + 3} className="text-[8px] fill-slate-400">x</text>
-      <text x={toSX(0) + 4} y={CHART_PAD - 12} className="text-[8px] fill-slate-400">y</text>
+      <text x={CHART_W - CHART_PAD + 6} y={toSY(0) + 4} className="text-[10px]" fill={INK} fontFamily="Kalam">x</text>
+      <text x={toSX(0) + 6} y={CHART_PAD - 14} className="text-[10px]" fill={INK} fontFamily="Kalam">y</text>
     </svg>
   );
 }
@@ -95,39 +131,100 @@ function MiniChart({
 
 function MeetFunctionsTab() {
   const [inputVal, setInputVal] = useState(0);
+  const [autoSweep, setAutoSweep] = useState(false);
+  const [highlightedFn, setHighlightedFn] = useState<string | null>(null);
+  const [sweepDir, setSweepDir] = useState(1);
+
+  // Auto sweep
+  useEffect(() => {
+    if (!autoSweep) return;
+    const id = setInterval(() => {
+      setInputVal((v) => {
+        let next = v + 0.1 * sweepDir;
+        if (next >= 5) { setSweepDir(-1); next = 5; }
+        if (next <= -5) { setSweepDir(1); next = -5; }
+        return next;
+      });
+    }, 40);
+    return () => clearInterval(id);
+  }, [autoSweep, sweepDir]);
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-600">
-          Input value (x): <span className="font-bold text-indigo-700">{inputVal.toFixed(1)}</span>
-        </label>
+    <div className="space-y-5">
+      {/* Input control */}
+      <div className="card-sketchy p-4 space-y-3" style={{ background: "#fff8e7" }}>
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <label className="font-hand text-base font-bold flex items-center gap-2">
+            Input value (x):
+            <span className="px-3 py-0.5 rounded border-2 border-foreground bg-accent-yellow text-foreground">
+              {inputVal.toFixed(1)}
+            </span>
+          </label>
+          <button
+            onClick={() => { playClick(); setAutoSweep((v) => !v); }}
+            className={`px-3 py-1.5 rounded-lg font-hand text-sm font-bold border-2 border-foreground transition-all ${
+              autoSweep ? "bg-accent-coral text-white shadow-[2px_2px_0_#2b2a35]" : "bg-background hover:bg-accent-yellow/40"
+            }`}
+          >
+            <Play className="w-3 h-3 inline mr-1" />
+            {autoSweep ? "Stop sweep" : "Auto-sweep"}
+          </button>
+        </div>
         <input
           type="range" min={-5} max={5} step={0.1} value={inputVal}
-          onChange={(e) => { playPop(); setInputVal(parseFloat(e.target.value)); }}
-          className="w-full accent-indigo-600"
+          onChange={(e) => { playPop(); setInputVal(parseFloat(e.target.value)); setAutoSweep(false); }}
+          className="w-full"
+          style={{ accentColor: "#ff6b6b" }}
         />
-        <div className="flex justify-between text-[10px] text-slate-400">
+        <div className="flex justify-between font-hand text-xs text-muted-foreground">
           <span>-5</span><span>0</span><span>5</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {activationFns.map((af) => (
-          <div key={af.name} className="bg-white border border-slate-200 rounded-lg p-2">
-            <MiniChart af={af} inputVal={inputVal} showCursor={true} />
-            <div className="text-center mt-1">
-              <span className="text-[10px] text-slate-500">f({inputVal.toFixed(1)}) = </span>
-              <span className="text-xs font-bold" style={{ color: af.color }}>
-                {af.fn(inputVal).toFixed(3)}
-              </span>
+      {/* Charts grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {activationFns.map((af) => {
+          const out = af.fn(inputVal);
+          const isHigh = highlightedFn === af.name;
+          return (
+            <div
+              key={af.name}
+              onMouseEnter={() => setHighlightedFn(af.name)}
+              onMouseLeave={() => setHighlightedFn(null)}
+              className={`card-sketchy p-3 transition-transform cursor-pointer ${isHigh ? "-translate-y-1" : ""}`}
+              style={isHigh ? { boxShadow: `6px 6px 0 ${af.color}` } : undefined}
+            >
+              <MiniChart af={af} inputVal={inputVal} showCursor highlighted={isHigh} />
+              <div className="mt-2 space-y-1.5">
+                <div className="flex items-center justify-between font-hand text-xs">
+                  <span className="text-muted-foreground">f({inputVal.toFixed(1)}) =</span>
+                  <span className="font-bold text-base px-2 py-0.5 rounded border-2 border-foreground" style={{ background: af.color, color: "#fff" }}>
+                    {out.toFixed(3)}
+                  </span>
+                </div>
+                {/* Output bar */}
+                <div className="h-2 rounded-full border border-foreground/40 overflow-hidden bg-background">
+                  <div
+                    className="h-full transition-all duration-200"
+                    style={{
+                      width: `${Math.max(0, Math.min(1, (out - af.range[0]) / (af.range[1] - af.range[0]))) * 100}%`,
+                      background: af.color,
+                    }}
+                  />
+                </div>
+                <div className="font-hand text-[11px] text-muted-foreground text-center italic">
+                  {af.formula}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <InfoBox variant="blue">
-        Each activation function transforms the input differently. Step is binary (on/off), Sigmoid squishes values between 0 and 1, Tanh between -1 and 1, and ReLU passes positives through unchanged.
+        <span className="font-hand text-base">
+          🎚️ Drag the slider or hit Auto-sweep to watch every activation function react in real time. Hover a card to highlight its glow.
+        </span>
       </InfoBox>
     </div>
   );
@@ -140,19 +237,23 @@ function MeetFunctionsTab() {
 function WhyNotLinearTab() {
   const [numUnits, setNumUnits] = useState(3);
   const [showNonLinear, setShowNonLinear] = useState(false);
+  const [drawKey, setDrawKey] = useState(0);
 
-  const W = 480, H = 200, pad = 40;
+  // Trigger redraw animation when toggling or unit count changes
+  useEffect(() => {
+    setDrawKey((k) => k + 1);
+  }, [showNonLinear, numUnits]);
+
+  const W = 520, H = 240, pad = 44;
   const xMin = -5, xMax = 5;
   const toSX = (v: number) => pad + ((v - xMin) / (xMax - xMin)) * (W - 2 * pad);
 
-  // Linear composition: y = a1 * (a2 * x) is still linear
   const linearOut = useCallback((x: number) => {
     let v = x;
     for (let i = 0; i < numUnits; i++) v = 0.7 * v + 0.2;
     return v;
   }, [numUnits]);
 
-  // ReLU composition: creates piecewise linear shapes
   const reluOut = useCallback((x: number) => {
     const shifts = [-2, -1, 0, 1, 2];
     let sum = 0;
@@ -165,10 +266,9 @@ function WhyNotLinearTab() {
 
   const computeFn = showNonLinear ? reluOut : linearOut;
 
-  // Compute range for y
   const yVals: number[] = [];
-  for (let px = 0; px <= 100; px++) {
-    yVals.push(computeFn(xMin + (px / 100) * (xMax - xMin)));
+  for (let px = 0; px <= 120; px++) {
+    yVals.push(computeFn(xMin + (px / 120) * (xMax - xMin)));
   }
   const yMinVal = Math.min(...yVals, -1);
   const yMaxVal = Math.max(...yVals, 1);
@@ -176,67 +276,106 @@ function WhyNotLinearTab() {
   const toSY = (v: number) => H - pad - ((v - yMinVal) / yRange) * (H - 2 * pad);
 
   const points: string[] = [];
-  for (let px = 0; px <= 100; px++) {
-    const x = xMin + (px / 100) * (xMax - xMin);
+  for (let px = 0; px <= 120; px++) {
+    const x = xMin + (px / 120) * (xMax - xMin);
     points.push(`${toSX(x).toFixed(1)},${toSY(computeFn(x)).toFixed(1)}`);
   }
   const pathD = "M " + points.join(" L ");
 
+  const curveColor = showNonLinear ? "#4ecdc4" : "#6bb6ff";
+
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 justify-center">
+    <div className="space-y-5">
+      {/* Toggle */}
+      <div className="flex gap-3 justify-center flex-wrap">
         <button
           onClick={() => { playClick(); setShowNonLinear(false); }}
-          className={`px-4 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+          className={`px-5 py-2 rounded-lg font-hand text-base font-bold border-2 border-foreground transition-all ${
             !showNonLinear
-              ? "bg-blue-600 text-white border-blue-600 shadow"
-              : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+              ? "bg-accent-sky text-white shadow-[3px_3px_0_#2b2a35]"
+              : "bg-background hover:bg-accent-sky/30"
           }`}
         >
-          Linear (y = ax + b)
+          Linear (boring)
         </button>
         <button
           onClick={() => { playClick(); setShowNonLinear(true); }}
-          className={`px-4 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+          className={`px-5 py-2 rounded-lg font-hand text-base font-bold border-2 border-foreground transition-all ${
             showNonLinear
-              ? "bg-green-600 text-white border-green-600 shadow"
-              : "bg-white text-slate-600 border-slate-200 hover:border-green-300"
+              ? "bg-accent-mint text-white shadow-[3px_3px_0_#2b2a35]"
+              : "bg-background hover:bg-accent-mint/30"
           }`}
         >
-          Non-linear (ReLU)
+          Non-linear (ReLU magic ✨)
         </button>
       </div>
 
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-600">
-          Stacked units: <span className="font-bold text-indigo-700">{numUnits}</span>
+      {/* Stacked units slider */}
+      <div className="card-sketchy p-4" style={{ background: "#fff8e7" }}>
+        <label className="font-hand text-base font-bold flex items-center justify-between mb-2">
+          <span>Stacked units:</span>
+          <span className="px-3 py-0.5 rounded border-2 border-foreground bg-accent-lav text-white">{numUnits}</span>
         </label>
         <input
           type="range" min={1} max={5} step={1} value={numUnits}
           onChange={(e) => { playPop(); setNumUnits(parseInt(e.target.value)); }}
-          className="w-full accent-indigo-600"
+          className="w-full"
+          style={{ accentColor: curveColor }}
         />
+        {/* Visual stack of units */}
+        <div className="flex gap-2 justify-center mt-3">
+          {Array.from({ length: numUnits }).map((_, i) => (
+            <div
+              key={i}
+              className="w-10 h-10 rounded-full border-2 border-foreground flex items-center justify-center font-hand text-xs font-bold animate-fadeIn"
+              style={{ background: curveColor, color: "#fff", boxShadow: "2px 2px 0 #2b2a35" }}
+            >
+              f{i + 1}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[480px] mx-auto">
-        <rect x={pad} y={pad - 10} width={W - 2 * pad} height={H - 2 * pad + 10} fill="#f8fafc" stroke="#e2e8f0" rx={4} />
-        {/* Zero lines */}
-        <line x1={toSX(0)} y1={pad - 10} x2={toSX(0)} y2={H - pad} stroke="#cbd5e1" strokeWidth={0.5} />
-        {yMinVal <= 0 && yMaxVal >= 0 && (
-          <line x1={pad} y1={toSY(0)} x2={W - pad} y2={toSY(0)} stroke="#cbd5e1" strokeWidth={0.5} />
-        )}
-        <path d={pathD} fill="none" stroke={showNonLinear ? "#22c55e" : "#3b82f6"} strokeWidth={2.5} strokeLinecap="round" />
-        <text x={W / 2} y={20} textAnchor="middle" className="text-[11px] fill-slate-600 font-semibold">
-          {showNonLinear
-            ? `${numUnits} ReLU units combined = complex shape`
-            : `${numUnits} linear functions stacked = still a line`}
-        </text>
-      </svg>
+      {/* Chart */}
+      <div className="card-sketchy p-3 notebook-grid">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[560px] mx-auto">
+          <defs>
+            <pattern id="why-grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke={INK} strokeOpacity="0.06" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect x={pad} y={pad - 10} width={W - 2 * pad} height={H - 2 * pad + 10} fill="#fffdf5" stroke={INK} strokeWidth={2} rx={4} />
+          <rect x={pad} y={pad - 10} width={W - 2 * pad} height={H - 2 * pad + 10} fill="url(#why-grid)" />
+
+          <line x1={toSX(0)} y1={pad - 10} x2={toSX(0)} y2={H - pad} stroke={INK} strokeWidth={1} strokeDasharray="3 3" opacity={0.4} />
+          {yMinVal <= 0 && yMaxVal >= 0 && (
+            <line x1={pad} y1={toSY(0)} x2={W - pad} y2={toSY(0)} stroke={INK} strokeWidth={1} strokeDasharray="3 3" opacity={0.4} />
+          )}
+
+          {/* Glow underlay */}
+          <path d={pathD} fill="none" stroke={curveColor} strokeWidth={8} strokeLinecap="round" opacity={0.25} />
+          {/* Animated draw curve */}
+          <path
+            key={drawKey}
+            d={pathD}
+            fill="none" stroke={curveColor} strokeWidth={3.5} strokeLinecap="round"
+            className="draw-line"
+          />
+
+          <text x={W / 2} y={24} textAnchor="middle" className="text-[13px] font-bold" fill={INK} fontFamily="Kalam">
+            {showNonLinear
+              ? `${numUnits} ReLU units combined → complex curve! 🎢`
+              : `${numUnits} linear functions stacked → still a line 😴`}
+          </text>
+        </svg>
+      </div>
 
       <InfoBox variant="amber" title="Why Non-Linearity Matters">
-        {showNonLinear
-          ? "Stacking non-linear functions like ReLU creates complex, piecewise curves. More units = more complexity. This is the power of neural networks!"
-          : "No matter how many linear functions you stack, the result is still a straight line: a(b(cx + d) + e) + f is still linear. You can never model curves with only linear layers!"}
+        <span className="font-hand text-base">
+          {showNonLinear
+            ? "🎢 Stacking non-linear functions creates rich, piecewise curves. More units = more bends. THIS is the power of neural networks!"
+            : "😴 No matter how many linear functions you stack, the result is still a straight line: a(b(cx + d) + e) + f is STILL linear. Without non-linearity, deep networks would be no better than a single neuron!"}
+        </span>
       </InfoBox>
     </div>
   );
@@ -246,26 +385,29 @@ function WhyNotLinearTab() {
 /*  Tab 3 — Activation Playground                                      */
 /* ------------------------------------------------------------------ */
 
-type ActivationType = "sigmoid" | "relu" | "tanh";
+type ActivationType = "sigmoid" | "relu" | "tanh" | "leakyRelu";
 const ACT_MAP: Record<ActivationType, (x: number) => number> = {
-  sigmoid,
-  relu,
-  tanh: tanh_,
+  sigmoid, relu, tanh: tanh_, leakyRelu,
 };
 const ACT_COLORS: Record<ActivationType, string> = {
-  sigmoid: "#3b82f6",
-  relu: "#22c55e",
-  tanh: "#8b5cf6",
+  sigmoid: "#6bb6ff",
+  relu: "#4ecdc4",
+  tanh: "#b18cf2",
+  leakyRelu: "#ffb88c",
+};
+const ACT_EMOJI: Record<ActivationType, string> = {
+  sigmoid: "〰️", relu: "📐", tanh: "🌊", leakyRelu: "💧",
 };
 
 function PlaygroundTab() {
   const [activation, setActivation] = useState<ActivationType>("sigmoid");
+  const [signalSpeed, setSignalSpeed] = useState(1.4);
+  const [showFlow, setShowFlow] = useState(true);
+  const [hoverPt, setHoverPt] = useState<{ x1: number; x2: number; val: number } | null>(null);
 
-  // Simple 2-input, 2-hidden, 1-output network with fixed weights
-  // but different activations to show how boundary changes
-  const w_h = [[0.8, -0.6], [-0.5, 0.9]]; // 2 hidden neurons, 2 weights each
+  const w_h = [[0.8, -0.6], [-0.5, 0.9]];
   const b_h = [-0.2, 0.1];
-  const w_o = [1.0, -0.8]; // output weights
+  const w_o = [1.0, -0.8];
   const b_o = -0.1;
 
   const act = ACT_MAP[activation];
@@ -279,9 +421,9 @@ function PlaygroundTab() {
     [activation],
   );
 
-  const plotSize = 260;
-  const pad = 30;
-  const gridRes = 30;
+  const plotSize = 280;
+  const pad = 36;
+  const gridRes = 36;
   const cellW = (plotSize - 2 * pad) / gridRes;
 
   const cells = useMemo(() => {
@@ -296,66 +438,150 @@ function PlaygroundTab() {
     return result;
   }, [forward]);
 
+  // Color: coral → yellow → mint
   const colorForVal = (v: number) => {
     const t = Math.max(0, Math.min(1, v));
-    const r = Math.round(239 + (34 - 239) * t);
-    const g = Math.round(68 + (197 - 68) * t);
-    const b = Math.round(68 + (94 - 68) * t);
-    return `rgb(${r},${g},${b})`;
+    if (t < 0.5) {
+      const k = t / 0.5;
+      const r = Math.round(255 + (255 - 255) * k);
+      const g = Math.round(107 + (217 - 107) * k);
+      const b = Math.round(107 + (61 - 107) * k);
+      return `rgb(${r},${g},${b})`;
+    } else {
+      const k = (t - 0.5) / 0.5;
+      const r = Math.round(255 + (78 - 255) * k);
+      const g = Math.round(217 + (205 - 217) * k);
+      const b = Math.round(61 + (196 - 61) * k);
+      return `rgb(${r},${g},${b})`;
+    }
+  };
+
+  const handlePlotClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const sx = ((e.clientX - rect.left) / rect.width) * plotSize;
+    const sy = ((e.clientY - rect.top) / rect.height) * plotSize;
+    if (sx < pad || sx > plotSize - pad || sy < pad || sy > plotSize - pad) return;
+    const x1 = ((sx - pad) / (plotSize - 2 * pad)) * 4 - 2;
+    const x2 = 2 - ((sy - pad) / (plotSize - 2 * pad)) * 4;
+    setHoverPt({ x1, x2, val: forward(x1, x2) });
+    playPop();
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 justify-center">
-        {(["sigmoid", "relu", "tanh"] as ActivationType[]).map((a) => (
+    <div className="space-y-5">
+      {/* Activation selector */}
+      <div className="flex gap-2 justify-center flex-wrap">
+        {(["sigmoid", "relu", "tanh", "leakyRelu"] as ActivationType[]).map((a) => (
           <button
             key={a}
             onClick={() => { playClick(); setActivation(a); }}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${
-              activation === a
-                ? "text-white shadow"
-                : "bg-white text-slate-600 border-slate-200 hover:border-indigo-300"
+            className={`px-4 py-1.5 rounded-lg font-hand text-sm font-bold border-2 border-foreground transition-all capitalize ${
+              activation === a ? "text-white shadow-[3px_3px_0_#2b2a35]" : "bg-background hover:bg-accent-yellow/30"
             }`}
-            style={activation === a ? { backgroundColor: ACT_COLORS[a], borderColor: ACT_COLORS[a] } : {}}
+            style={activation === a ? { backgroundColor: ACT_COLORS[a] } : {}}
           >
-            {a}
+            {ACT_EMOJI[a]} {a}
           </button>
         ))}
       </div>
 
+      {/* Customization */}
+      <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-4">
+        <label className="font-hand text-sm font-bold flex items-center gap-2">
+          Flow speed:
+          <input
+            type="range" min={0.4} max={3} step={0.1} value={signalSpeed}
+            onChange={(e) => setSignalSpeed(parseFloat(e.target.value))}
+            className="w-24" style={{ accentColor: ACT_COLORS[activation] }}
+          />
+        </label>
+        <label className="flex items-center gap-1.5 font-hand text-sm font-bold cursor-pointer">
+          <input type="checkbox" checked={showFlow} onChange={(e) => setShowFlow(e.target.checked)} />
+          Show signal flow
+        </label>
+      </div>
+
       {/* Network diagram */}
-      <svg viewBox="0 0 400 120" className="w-full max-w-[400px] mx-auto">
-        {/* Input nodes */}
-        <circle cx={40} cy={35} r={16} fill="#f1f5f9" stroke="#64748b" strokeWidth={1.5} />
-        <text x={40} y={39} textAnchor="middle" className="text-[10px] fill-slate-700 font-bold">x1</text>
-        <circle cx={40} cy={85} r={16} fill="#f1f5f9" stroke="#64748b" strokeWidth={1.5} />
-        <text x={40} y={89} textAnchor="middle" className="text-[10px] fill-slate-700 font-bold">x2</text>
-        {/* Hidden nodes */}
-        {[35, 85].map((y, i) => (
-          <g key={i}>
-            <line x1={58} y1={35} x2={170} y2={y} stroke="#94a3b8" strokeWidth={1} />
-            <line x1={58} y1={85} x2={170} y2={y} stroke="#94a3b8" strokeWidth={1} />
-            <circle cx={188} cy={y} r={16} fill={ACT_COLORS[activation]} opacity={0.2} />
-            <circle cx={188} cy={y} r={12} fill={ACT_COLORS[activation]} />
-            <text x={188} y={y + 4} textAnchor="middle" className="text-[9px] fill-white font-bold">h{i + 1}</text>
-          </g>
-        ))}
-        {/* Output node */}
-        <line x1={202} y1={35} x2={318} y2={60} stroke="#94a3b8" strokeWidth={1} />
-        <line x1={202} y1={85} x2={318} y2={60} stroke="#94a3b8" strokeWidth={1} />
-        <circle cx={336} cy={60} r={18} fill="#f1f5f9" stroke="#334155" strokeWidth={1.5} />
-        <text x={336} y={64} textAnchor="middle" className="text-[10px] fill-slate-700 font-bold">out</text>
-        {/* Labels */}
-        <text x={40} y={12} textAnchor="middle" className="text-[8px] fill-slate-400 font-medium">INPUT</text>
-        <text x={188} y={12} textAnchor="middle" className="text-[8px] font-medium" fill={ACT_COLORS[activation]}>
-          HIDDEN ({activation.toUpperCase()})
-        </text>
-        <text x={336} y={35} textAnchor="middle" className="text-[8px] fill-slate-400 font-medium">OUTPUT</text>
-      </svg>
+      <div className="card-sketchy p-3 notebook-grid">
+        <svg viewBox="0 0 440 160" className="w-full max-w-[460px] mx-auto">
+          <defs>
+            <radialGradient id="pg-grad">
+              <stop offset="0%" stopColor="#fff" />
+              <stop offset="100%" stopColor={ACT_COLORS[activation]} />
+            </radialGradient>
+          </defs>
+
+          {/* Connections input → hidden */}
+          {[45, 105].map((iy) =>
+            [45, 105].map((hy) => (
+              <g key={`ih-${iy}-${hy}`}>
+                <line
+                  x1={62} y1={iy} x2={188} y2={hy}
+                  stroke={ACT_COLORS[activation]} strokeWidth={2.2} strokeLinecap="round"
+                  className={showFlow ? "signal-flow" : ""}
+                  style={showFlow ? { animationDuration: `${signalSpeed}s`, color: ACT_COLORS[activation] } : undefined}
+                />
+                {showFlow && (
+                  <circle r={3.5} fill="#ffd93d" stroke={INK} strokeWidth={1}>
+                    <animateMotion dur={`${signalSpeed}s`} repeatCount="indefinite" path={`M62,${iy} L188,${hy}`} />
+                  </circle>
+                )}
+              </g>
+            ))
+          )}
+
+          {/* Connections hidden → output */}
+          {[45, 105].map((hy) => (
+            <g key={`ho-${hy}`}>
+              <line
+                x1={216} y1={hy} x2={336} y2={75}
+                stroke={ACT_COLORS[activation]} strokeWidth={2.2} strokeLinecap="round"
+                className={showFlow ? "signal-flow" : ""}
+                style={showFlow ? { animationDuration: `${signalSpeed}s`, color: ACT_COLORS[activation] } : undefined}
+              />
+              {showFlow && (
+                <circle r={3.5} fill="#ffd93d" stroke={INK} strokeWidth={1}>
+                  <animateMotion dur={`${signalSpeed}s`} repeatCount="indefinite" path={`M216,${hy} L336,75`} />
+                </circle>
+              )}
+            </g>
+          ))}
+
+          {/* Input nodes */}
+          {[45, 105].map((y, i) => (
+            <g key={`in-${i}`}>
+              <circle cx={45} cy={y} r={20} fill="#fffdf5" stroke={INK} strokeWidth={2.5} />
+              <text x={45} y={y + 5} textAnchor="middle" className="text-[13px] font-bold" fill={INK} fontFamily="Kalam">x{i + 1}</text>
+            </g>
+          ))}
+
+          {/* Hidden nodes */}
+          {[45, 105].map((y, i) => (
+            <g key={`h-${i}`}>
+              <circle cx={202} cy={y} r={22} fill="url(#pg-grad)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: ACT_COLORS[activation] }} />
+              <text x={202} y={y + 5} textAnchor="middle" className="text-[12px] font-bold" fill="#fff" fontFamily="Kalam">h{i + 1}</text>
+            </g>
+          ))}
+
+          {/* Output node */}
+          <circle cx={355} cy={75} r={24} fill="#fff8e7" stroke={INK} strokeWidth={2.5} />
+          <text x={355} y={80} textAnchor="middle" className="text-[13px] font-bold" fill={INK} fontFamily="Kalam">out</text>
+
+          {/* Layer labels */}
+          <text x={45} y={20} textAnchor="middle" className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">INPUT</text>
+          <text x={202} y={20} textAnchor="middle" className="text-[10px] font-bold" fill={ACT_COLORS[activation]} fontFamily="Kalam">
+            HIDDEN ({activation.toUpperCase()})
+          </text>
+          <text x={355} y={40} textAnchor="middle" className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">OUTPUT</text>
+        </svg>
+      </div>
 
       {/* Decision boundary heatmap */}
-      <div className="flex justify-center">
-        <svg viewBox={`0 0 ${plotSize} ${plotSize}`} className="w-64 h-64">
+      <div className="card-sketchy p-3 flex flex-col items-center">
+        <div className="font-hand text-sm font-bold text-foreground mb-2">
+          Decision boundary <span className="text-muted-foreground">(click to inspect a point)</span>
+        </div>
+        <svg viewBox={`0 0 ${plotSize} ${plotSize}`} className="w-72 h-72 cursor-crosshair" onClick={handlePlotClick}>
           {cells.map((c, i) => (
             <rect
               key={i}
@@ -366,19 +592,49 @@ function PlaygroundTab() {
               fill={colorForVal(c.val)}
             />
           ))}
-          <rect x={pad} y={pad} width={plotSize - 2 * pad} height={plotSize - 2 * pad} fill="none" stroke="#cbd5e1" />
-          <text x={plotSize / 2} y={plotSize - 8} textAnchor="middle" className="text-[9px] fill-slate-500">x1</text>
-          <text x={8} y={plotSize / 2} textAnchor="middle" className="text-[9px] fill-slate-500" transform={`rotate(-90 8 ${plotSize / 2})`}>x2</text>
+          <rect x={pad} y={pad} width={plotSize - 2 * pad} height={plotSize - 2 * pad} fill="none" stroke={INK} strokeWidth={2.5} rx={4} />
+
+          {/* Hover point */}
+          {hoverPt && (() => {
+            const sx = pad + ((hoverPt.x1 + 2) / 4) * (plotSize - 2 * pad);
+            const sy = pad + ((2 - hoverPt.x2) / 4) * (plotSize - 2 * pad);
+            return (
+              <g>
+                <circle cx={sx} cy={sy} r={14} fill="none" stroke="#ffd93d" strokeWidth={3} className="pulse-glow" style={{ color: "#ffd93d" }} />
+                <circle cx={sx} cy={sy} r={6} fill="#ffd93d" stroke={INK} strokeWidth={2} />
+                <text x={sx} y={sy - 18} textAnchor="middle" className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">
+                  ({hoverPt.x1.toFixed(1)}, {hoverPt.x2.toFixed(1)}) → {hoverPt.val.toFixed(2)}
+                </text>
+              </g>
+            );
+          })()}
+
+          <text x={plotSize / 2} y={plotSize - 10} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">x1</text>
+          <text x={14} y={plotSize / 2} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam" transform={`rotate(-90 14 ${plotSize / 2})`}>x2</text>
+
           {/* Legend */}
-          <rect x={plotSize - 60} y={pad} width={10} height={10} fill={colorForVal(0)} stroke="#cbd5e1" strokeWidth={0.5} />
-          <text x={plotSize - 45} y={pad + 8} className="text-[8px] fill-slate-500">Low</text>
-          <rect x={plotSize - 60} y={pad + 14} width={10} height={10} fill={colorForVal(1)} stroke="#cbd5e1" strokeWidth={0.5} />
-          <text x={plotSize - 45} y={pad + 22} className="text-[8px] fill-slate-500">High</text>
+          <g>
+            <rect x={plotSize - 70} y={pad} width={12} height={12} fill={colorForVal(0)} stroke={INK} strokeWidth={1.5} />
+            <text x={plotSize - 54} y={pad + 10} className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">Low</text>
+            <rect x={plotSize - 70} y={pad + 18} width={12} height={12} fill={colorForVal(1)} stroke={INK} strokeWidth={1.5} />
+            <text x={plotSize - 54} y={pad + 28} className="text-[10px] font-bold" fill={INK} fontFamily="Kalam">High</text>
+          </g>
         </svg>
+        {hoverPt && (
+          <button
+            onClick={() => { setHoverPt(null); playClick(); }}
+            className="mt-2 px-3 py-1 rounded font-hand text-xs font-bold border-2 border-foreground bg-background hover:bg-accent-yellow/30"
+          >
+            <RotateCcw className="w-3 h-3 inline mr-1" />
+            Clear pin
+          </button>
+        )}
       </div>
 
       <InfoBox variant="indigo">
-        The same network with different activation functions produces different decision boundaries. Sigmoid creates smooth curves, ReLU creates sharp edges, and Tanh creates balanced regions. Try switching between them!
+        <span className="font-hand text-base">
+          🎨 The same network with different activations produces wildly different decision boundaries. Sigmoid → smooth gradients, ReLU → sharp edges, Tanh → balanced regions, LeakyReLU → similar to ReLU but with subtle slope on negatives. Click anywhere on the heatmap to inspect a value!
+        </span>
       </InfoBox>
     </div>
   );
