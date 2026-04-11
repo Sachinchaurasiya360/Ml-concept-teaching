@@ -22,6 +22,15 @@ import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop, playSuccess, playError } from "../../utils/sounds";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 /* Sketchy palette */
 const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
@@ -92,6 +101,12 @@ function Tab1DataAroundUs() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Data is just &quot;stuff we wrote down.&quot; Temperatures, photos, names, scores, clicks,
+        heartbeats. If you can record it, it&apos;s data. Tap each card to reveal a piece of data
+        hiding in everyday life.
+      </RikuSays>
+
       <div className="text-center">
         <span
           className="inline-block font-hand text-sm font-bold px-4 py-1.5 rounded-full border-2"
@@ -203,6 +218,12 @@ function Tab1DataAroundUs() {
         Data is just information that has been organized so a computer can work with it.
         Numbers, words, colors — all of it is data!
       </InfoBox>
+
+      <RikuSays>
+        Notice how some values are <b>numbers</b> (28, 7, 152) and some are <b>categories</b>
+        (Brown, Red). Both are valid data — but computers treat them differently. Remember that
+        split, it&apos;s going to come back big time in ML.
+      </RikuSays>
     </div>
   );
 }
@@ -382,6 +403,12 @@ function Tab2BuildTable() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Humans think in stories. Computers think in tables. Learning ML is mostly about
+        translating between the two. Fill in the blanks below and watch the stats at the bottom
+        update live — that&apos;s exactly how data analysis feels.
+      </RikuSays>
+
       <div className="card-sketchy p-3 overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
@@ -429,6 +456,12 @@ function Tab2BuildTable() {
         A data table organizes information into rows (one per person or thing) and columns (one per measurement).
         This is how most datasets in the world look!
       </InfoBox>
+
+      <RikuSays>
+        Each row is one student. Each column is one thing we measured about them. ML people call
+        the rows <b>samples</b> and the columns <b>features</b>. Congrats — you just built a
+        dataset.
+      </RikuSays>
     </div>
   );
 }
@@ -501,6 +534,12 @@ function Tab3SortingGame() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Quick trick: if you can meaningfully <b>add</b> two values (100 kg + 50 kg = 150 kg), it&apos;s
+        a number. If adding them is nonsense (Blue + Red = ???), it&apos;s a category. Sort each
+        item into the right bin!
+      </RikuSays>
+
       <div className="flex items-center justify-between">
         <span
           className="inline-block font-hand text-sm font-bold px-4 py-1.5 rounded-full border-2"
@@ -628,6 +667,12 @@ function Tab3SortingGame() {
         Knowing whether data is a number or a category matters because computers handle them differently.
         Numbers can be added and averaged. Categories can be counted and grouped.
       </InfoBox>
+
+      <RikuSays>
+        Sneaky one: <b>&quot;5 stars&quot;</b> is a category, not a number! You can&apos;t compute
+        &quot;half a star review&quot; and have it mean the same thing. When data <em>looks</em>
+        numeric but is really a label, that&apos;s where beginner ML models go wrong.
+      </RikuSays>
     </div>
   );
 }

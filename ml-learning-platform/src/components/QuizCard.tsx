@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, XCircle, RotateCcw, Trophy } from "lucide-react";
 import { playSuccess, playError, playComplete, playClick } from "../utils/sounds";
+import { awardQuizResult } from "../utils/gamification";
 
 interface Question {
   question: string;
@@ -46,7 +47,8 @@ export default function QuizCard({ questions, onComplete }: QuizCardProps) {
     } else {
       setFinished(true);
       playComplete();
-      onComplete?.(score + (selected === q.correctIndex ? 0 : 0), questions.length);
+      awardQuizResult(score, questions.length);
+      onComplete?.(score, questions.length);
     }
   }
 

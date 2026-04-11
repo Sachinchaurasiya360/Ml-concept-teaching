@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { awardReviewCorrect } from "./gamification";
 
 export interface ReviewCardDef {
   id: string;
@@ -74,6 +75,7 @@ export function gradeCard(id: string, correct: boolean) {
   if (!c) return;
   if (correct) {
     c.box = Math.min(5, c.box + 1);
+    awardReviewCorrect();
   } else {
     c.box = 1;
   }

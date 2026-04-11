@@ -16,6 +16,10 @@ import {
   markTabComplete,
   markLessonComplete,
 } from "../utils/progress";
+import {
+  awardTabComplete,
+  awardLessonComplete,
+} from "../utils/gamification";
 
 interface TabDef {
   id: string;
@@ -66,12 +70,18 @@ export default function LessonShell({ title, level, lessonNumber, tabs, quiz, ne
 
   const extras = getLessonExtras(lessonPath);
 
-  // Mark tab complete when visited; mark lesson complete when reaching Challenge
+  // Mark tab complete when visited; mark lesson complete when reaching Challenge.
+  // XP is only awarded on the *first* completion (progress.tabs is the source of truth).
   useEffect(() => {
+    const wasTabDone = (progress.tabs[lessonPath] ?? []).includes(activeTab);
+    const wasLessonDone = progress.lessons.includes(lessonPath);
     markTabComplete(lessonPath, activeTab);
+    if (!wasTabDone) awardTabComplete();
     if (activeTab === "__quiz") {
       markLessonComplete(lessonPath);
+      if (!wasLessonDone) awardLessonComplete(lessonPath);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, lessonPath]);
 
   // Register spaced-repetition cards on first visit

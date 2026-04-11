@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { Camera, Mic, Radar } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop } from "../../utils/sounds";
+
+function RikuSays({ children }: { children: ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
 
 const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
@@ -56,8 +66,12 @@ function CameraEyeTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Senses are how you collect data. Eyes = camera. Ears = microphone. Fingers = touch sensor. You are full of data-gathering hardware — and so is every ML system. Let&apos;s peek inside a camera.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
-        A camera's eye is just a <span style={{ color: CORAL, fontWeight: 700 }}>tiny grid of dots</span>.
+        A camera&apos;s eye is just a <span style={{ color: CORAL, fontWeight: 700 }}>tiny grid of dots</span>.
         Each dot stores three numbers: how much <span style={{ color: CORAL }}>red</span>,{" "}
         <span style={{ color: MINT }}>green</span>, and <span style={{ color: SKY }}>blue</span> it sees.
       </p>
@@ -156,6 +170,10 @@ function CameraEyeTab() {
         Your phone camera has <b>millions</b> of these tiny dots — that's why it's called a <b>12-megapixel</b> camera!
         Each photo you take is just a giant grid of red, green, and blue numbers.
       </InfoBox>
+
+      <RikuSays>
+        Fun thing to remember: to an ML model, a photo isn&apos;t a cat or a sunset — it&apos;s just a matrix of numbers. All the &quot;seeing&quot; happens by doing math on that grid.
+      </RikuSays>
     </div>
   );
 }
@@ -199,6 +217,10 @@ function MicrophoneTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        A microphone is basically an ear with a cable. Sound is just air wiggling, and the mic catches each wiggle and writes it down as a number. Thousands of numbers per second.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
         A microphone is an <span style={{ color: LAVENDER, fontWeight: 700 }}>ear made of metal</span>.
         It turns sound waves wiggling in the air into a long list of numbers.
@@ -281,6 +303,10 @@ function MicrophoneTab() {
       <InfoBox variant="amber">
         Voice assistants like Alexa and Siri grab <b>16,000 of these numbers every second</b>. Your "Hey Siri" is just a long, long list of tiny wave heights.
       </InfoBox>
+
+      <RikuSays>
+        Play with the sliders and watch the bars jump. Louder = taller spikes. Higher pitch = faster wiggles. The ML trick later is: can a model tell &quot;dog bark&quot; from &quot;car honk&quot; just from the shape of those numbers?
+      </RikuSays>
     </div>
   );
 }
@@ -301,8 +327,12 @@ const SENSORS: { emoji: string; name: string; what: string; into: string; exampl
 function SensorZooTab() {
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Machines get their &quot;senses&quot; from sensors: temperature sensors, light sensors, cameras, microphones. Same idea, different casing. Every sensor has one job — turn something real into numbers.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
-        Every machine that "knows" something about the world uses a <span style={{ color: MINT, fontWeight: 700 }}>sensor</span>. Each sensor turns one thing about reality into <span style={{ color: CORAL, fontWeight: 700 }}>numbers</span>.
+        Every machine that &quot;knows&quot; something about the world uses a <span style={{ color: MINT, fontWeight: 700 }}>sensor</span>. Each sensor turns one thing about reality into <span style={{ color: CORAL, fontWeight: 700 }}>numbers</span>.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -340,6 +370,10 @@ function SensorZooTab() {
       <InfoBox variant="green">
         A modern smartphone has <b>15+ sensors</b> packed inside it. ML systems become powerful by combining many sensors at once — like a self-driving car using cameras + radar + GPS together.
       </InfoBox>
+
+      <RikuSays>
+        This is where ML really begins: <b>data starts at a sensor</b>. No sensors, no data. No data, nothing to learn from. The world around us is a firehose of numbers — ML&apos;s job is to drink from it without drowning.
+      </RikuSays>
     </div>
   );
 }

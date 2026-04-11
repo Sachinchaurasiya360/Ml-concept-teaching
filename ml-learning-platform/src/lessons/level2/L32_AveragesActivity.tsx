@@ -5,16 +5,36 @@ import { Scale, BarChart3, Trophy, Plus, Minus } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
+import {
+  Histogram,
+  BoxPlot,
+  BarChart,
+} from "../../components/viz/data-viz";
 import { playClick, playPop, playSuccess } from "../../utils/sounds";
 
-const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
 const MINT = "#4ecdc4";
 const YELLOW = "#ffd93d";
 const LAVENDER = "#b18cf2";
 const SKY = "#6bb6ff";
-const PEACH = "#ffb88c";
-const PAPER = "#fffdf5";
+
+/* ------------------------------------------------------------------ */
+/*  Riku dialogue helper                                               */
+/* ------------------------------------------------------------------ */
+
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Tab 1 – Balance Beam (Mean as balancing point)                     */
@@ -24,12 +44,9 @@ function BalanceTab() {
   const [values, setValues] = useState<number[]>([3, 5, 7, 8]);
 
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const W = 400;
-  const PAD = 30;
-  const xFor = (v: number) => PAD + (v / 10) * (W - PAD * 2);
 
   function addValue(v: number) {
-    if (values.length >= 10) return;
+    if (values.length >= 15) return;
     playPop();
     setValues([...values, v]);
   }
@@ -39,113 +56,42 @@ function BalanceTab() {
     setValues(values.slice(0, -1));
   }
 
-  // Tilt: difference between mean and beam center (5)
-  const tilt = (mean - 5) * 2.5;
-
   return (
     <div className="space-y-4">
+      <RikuSays>
+        The mean is the &quot;fair share&quot; — if everyone got exactly the
+        same amount, how much would that be? Add &apos;em up, divide by count.
+        Done.
+      </RikuSays>
+
       <p className="font-hand text-base text-foreground text-center">
-        The <b>mean</b> is the spot where data balances perfectly — like a seesaw.
+        The <b>mean</b> is the spot where data balances perfectly — like a
+        seesaw.
       </p>
 
-      <div className="card-sketchy notebook-grid p-4" style={{ background: PAPER }}>
-        <svg width="100%" viewBox={`0 0 ${W} 200`} style={{ maxHeight: 240 }}>
-          <defs>
-            {[CORAL, MINT, LAVENDER, SKY, PEACH].map((c, idx) => (
-              <linearGradient key={idx} id={`bal-grad-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
-                <stop offset="100%" stopColor={c} />
-              </linearGradient>
-            ))}
-            <radialGradient id="bal-pivot" cx="50%" cy="50%">
-              <stop offset="0%" stopColor="#fff3a0" />
-              <stop offset="100%" stopColor={YELLOW} />
-            </radialGradient>
-          </defs>
-          {/* Pivot triangle (always at mean) */}
-          <polygon
-            points={`${xFor(mean) - 14},170 ${xFor(mean) + 14},170 ${xFor(mean)},145`}
-            fill="url(#bal-pivot)"
-            stroke={INK}
-            strokeWidth="2"
-            className="pulse-glow"
-            style={{ color: YELLOW, transition: "all 0.4s ease" }}
-          />
-          <text
-            x={xFor(mean)}
-            y="190"
-            textAnchor="middle"
-            fill={INK}
-            style={{ fontFamily: "Kalam, cursive", fontSize: 13, fontWeight: 700 }}
-          >
-            mean = {mean.toFixed(2)}
-          </text>
+      <div className="card-sketchy p-4" style={{ background: "#fffdf5" }}>
+        <Histogram
+          data={values}
+          bins={Math.min(10, Math.max(4, new Set(values).size))}
+          showMean
+          width={520}
+          height={260}
+          xLabel="value"
+          yLabel="count"
+          color="var(--accent-sky)"
+        />
+      </div>
 
-          {/* Beam (rotates) */}
-          <g
-            style={{
-              transform: `rotate(${tilt}deg)`,
-              transformOrigin: `${xFor(mean)}px 140px`,
-              transition: "transform 0.5s ease",
-            }}
-          >
-            <line
-              x1={PAD}
-              y1="140"
-              x2={W - PAD}
-              y2="140"
-              stroke={INK}
-              strokeWidth="4"
-              strokeLinecap="round"
-            />
-            {/* Tick marks */}
-            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((t) => (
-              <g key={t}>
-                <line
-                  x1={xFor(t)}
-                  y1="135"
-                  x2={xFor(t)}
-                  y2="145"
-                  stroke={INK}
-                  strokeWidth="1.5"
-                  opacity="0.5"
-                />
-                <text
-                  x={xFor(t)}
-                  y="128"
-                  textAnchor="middle"
-                  fill={INK}
-                  opacity="0.5"
-                  style={{ fontFamily: "Patrick Hand, cursive", fontSize: 10 }}
-                >
-                  {t}
-                </text>
-              </g>
-            ))}
-
-            {/* Stack values like blocks */}
-            {values.map((v, i) => {
-              const stackIdx = values.slice(0, i).filter((x) => x === v).length;
-              return (
-                <rect
-                  key={i}
-                  x={xFor(v) - 10}
-                  y={120 - stackIdx * 18}
-                  width="20"
-                  height="16"
-                  fill={`url(#bal-grad-${i % 5})`}
-                  stroke={INK}
-                  strokeWidth="2"
-                  rx="2"
-                  style={{
-                    transition: "all 0.3s ease",
-                    filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)",
-                  }}
-                />
-              );
-            })}
-          </g>
-        </svg>
+      <div
+        className="card-sketchy p-3 text-center"
+        style={{ background: CORAL + "22" }}
+      >
+        <p className="font-hand text-sm font-bold text-foreground">
+          mean = {mean.toFixed(2)}{" "}
+          <span className="text-muted-foreground">
+            ({values.length} value{values.length === 1 ? "" : "s"})
+          </span>
+        </p>
       </div>
 
       {/* Controls */}
@@ -158,9 +104,9 @@ function BalanceTab() {
             <button
               key={n}
               onClick={() => addValue(n)}
-              disabled={values.length >= 10}
+              disabled={values.length >= 15}
               className="px-3 py-1.5 rounded-lg border-2 border-foreground font-hand text-sm font-bold bg-background hover:bg-accent-yellow/50 transition-colors"
-              style={{ opacity: values.length >= 10 ? 0.4 : 1 }}
+              style={{ opacity: values.length >= 15 ? 0.4 : 1 }}
             >
               {n}
             </button>
@@ -185,9 +131,16 @@ function BalanceTab() {
         </p>
       </div>
 
+      <RikuSays>
+        See that coral line in the histogram? That&apos;s the mean. Add a huge
+        value and watch it drag to the right like it&apos;s being pulled on a
+        leash.
+      </RikuSays>
+
       <InfoBox variant="blue">
-        The mean = (sum of all values) ÷ (how many values). It's the perfect
-        balance point. If you put a real seesaw under it, the data wouldn't tip!
+        The mean = (sum of all values) ÷ (how many values). It&apos;s the
+        perfect balance point. If you put a real seesaw under it, the data
+        wouldn&apos;t tip!
       </InfoBox>
     </div>
   );
@@ -198,162 +151,82 @@ function BalanceTab() {
 /* ------------------------------------------------------------------ */
 
 function MeanMedianTab() {
-  const [vals, setVals] = useState<number[]>([4, 5, 6, 7, 8]);
+  const [vals, setVals] = useState<number[]>([4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-  const sorted = [...vals].sort((a, b) => a - b);
+  const sorted = useMemo(() => [...vals].sort((a, b) => a - b), [vals]);
   const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
   const median =
     sorted.length % 2 === 1
       ? sorted[Math.floor(sorted.length / 2)]
       : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
 
-  const W = 400;
-  const PAD = 30;
-  const MAX = 100;
-  const xFor = (v: number) => PAD + (v / MAX) * (W - PAD * 2);
-
   function addValue(v: number) {
-    if (vals.length >= 10) return;
+    if (vals.length >= 15) return;
     playPop();
     setVals([...vals, v]);
   }
 
+  // Bars showing how mean vs median compare side-by-side.
+  const compareBars = [
+    { label: "mean", value: Number(mean.toFixed(2)), color: CORAL },
+    { label: "median", value: Number(median.toFixed(2)), color: LAVENDER },
+  ];
+
   return (
     <div className="space-y-4">
+      <RikuSays>
+        The mean is the &quot;fair share&quot; — if everyone got the same
+        amount. The median is &quot;the middle person&quot;. They&apos;re
+        usually close, but outliers break the mean.
+      </RikuSays>
+
       <p className="font-hand text-base text-foreground text-center">
-        Mean and median both find the "middle" — but in different ways.
+        Mean and median both find the &quot;middle&quot; — but in different
+        ways.
       </p>
 
-      <div className="card-sketchy notebook-grid p-4" style={{ background: PAPER }}>
-        <svg width="100%" viewBox={`0 0 ${W} 180`} style={{ maxHeight: 220 }}>
-          <defs>
-            <radialGradient id="mm-sky" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#94caff" />
-              <stop offset="100%" stopColor={SKY} />
-            </radialGradient>
-            <linearGradient id="mm-yellow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#fff3a0" />
-              <stop offset="100%" stopColor={YELLOW} />
-            </linearGradient>
-            <linearGradient id="mm-mint" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#7ee0d8" />
-              <stop offset="100%" stopColor={MINT} />
-            </linearGradient>
-          </defs>
-          {/* Number line */}
-          <line
-            x1={PAD}
-            y1="120"
-            x2={W - PAD}
-            y2="120"
-            stroke={INK}
-            strokeWidth="2"
-          />
-          {[0, 20, 40, 60, 80, 100].map((t) => (
-            <g key={t}>
-              <line
-                x1={xFor(t)}
-                y1="115"
-                x2={xFor(t)}
-                y2="125"
-                stroke={INK}
-                strokeWidth="1.5"
-              />
-              <text
-                x={xFor(t)}
-                y="140"
-                textAnchor="middle"
-                fill={INK}
-                opacity="0.5"
-                style={{ fontFamily: "Patrick Hand, cursive", fontSize: 10 }}
-              >
-                {t}
-              </text>
-            </g>
-          ))}
+      {/* Histogram with mean + median overlays */}
+      <div className="card-sketchy p-4" style={{ background: "#fffdf5" }}>
+        <Histogram
+          data={vals}
+          bins={8}
+          showMean
+          showMedian
+          width={520}
+          height={260}
+          xLabel="value"
+          yLabel="count"
+          color="var(--accent-sky)"
+        />
+      </div>
 
-          {/* Data points */}
-          {vals.map((v, i) => (
-            <circle
-              key={i}
-              cx={xFor(v)}
-              cy={105 - (i % 3) * 5}
-              r="7"
-              fill="url(#mm-sky)"
-              stroke={INK}
-              strokeWidth="2"
-              style={{ filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)" }}
-            />
-          ))}
+      {/* BoxPlot to show median + quartiles */}
+      <div className="card-sketchy p-4" style={{ background: "#fffdf5" }}>
+        <p className="font-hand text-xs text-muted-foreground mb-2 text-center">
+          Box plot: the line inside the box is the median. The box itself holds
+          the middle half of the data.
+        </p>
+        <BoxPlot
+          data={vals}
+          width={520}
+          height={220}
+          yLabel="value"
+          labels={["your data"]}
+        />
+      </div>
 
-          {/* Mean marker (yellow) */}
-          <g style={{ transition: "all 0.5s ease" }}>
-            <line
-              x1={xFor(mean)}
-              y1="50"
-              x2={xFor(mean)}
-              y2="120"
-              stroke={YELLOW}
-              strokeWidth="3"
-              strokeDasharray="5 3"
-              className="signal-flow pulse-glow"
-              style={{ color: YELLOW }}
-            />
-            <rect
-              x={xFor(mean) - 26}
-              y="30"
-              width="52"
-              height="20"
-              fill="url(#mm-yellow)"
-              stroke={INK}
-              strokeWidth="2"
-              rx="3"
-              style={{ filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)" }}
-            />
-            <text
-              x={xFor(mean)}
-              y="44"
-              textAnchor="middle"
-              fill={INK}
-              style={{ fontFamily: "Kalam, cursive", fontSize: 12, fontWeight: 700 }}
-            >
-              mean {mean.toFixed(1)}
-            </text>
-          </g>
-
-          {/* Median marker (mint) */}
-          <g style={{ transition: "all 0.5s ease" }}>
-            <line
-              x1={xFor(median)}
-              y1="80"
-              x2={xFor(median)}
-              y2="120"
-              stroke={MINT}
-              strokeWidth="3"
-              strokeDasharray="5 3"
-            />
-            <rect
-              x={xFor(median) - 30}
-              y="60"
-              width="60"
-              height="20"
-              fill="url(#mm-mint)"
-              stroke={INK}
-              strokeWidth="2"
-              rx="3"
-              style={{ filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)" }}
-            />
-            <text
-              x={xFor(median)}
-              y="74"
-              textAnchor="middle"
-              fill={INK}
-              style={{ fontFamily: "Kalam, cursive", fontSize: 12, fontWeight: 700 }}
-            >
-              median {median}
-            </text>
-          </g>
-        </svg>
+      {/* Side-by-side comparison bar chart */}
+      <div className="card-sketchy p-4" style={{ background: "#fffdf5" }}>
+        <p className="font-hand text-xs text-muted-foreground mb-2 text-center">
+          Side-by-side: mean (coral) vs median (lavender).
+        </p>
+        <BarChart
+          data={compareBars}
+          width={520}
+          height={220}
+          yLabel="value"
+          animateOnMount={false}
+        />
       </div>
 
       <div className="card-sketchy p-4 space-y-3" style={{ background: "#fff8e7" }}>
@@ -372,22 +245,24 @@ function MeanMedianTab() {
             </button>
           ))}
           <button
-            onClick={() => setVals([4, 5, 6, 7, 8])}
+            onClick={() =>
+              setVals([4, 5, 6, 7, 8, 9, 10, 11, 12])
+            }
             className="btn-sketchy-outline font-hand text-xs"
           >
             Reset
           </button>
         </div>
         <p className="font-hand text-xs text-muted-foreground">
-          Try adding <b>100</b> a few times — watch the yellow mean DASH right
-          while the mint median barely moves!
+          Try adding <b>100</b> a few times — watch the coral mean line DASH
+          right while the lavender median barely moves!
         </p>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
         <div
           className="card-sketchy p-3"
-          style={{ background: YELLOW + "33" }}
+          style={{ background: CORAL + "22" }}
         >
           <p className="font-hand font-bold text-foreground">Mean (average)</p>
           <p className="font-hand text-xs text-foreground mt-1">
@@ -397,19 +272,27 @@ function MeanMedianTab() {
         </div>
         <div
           className="card-sketchy p-3"
-          style={{ background: MINT + "33" }}
+          style={{ background: LAVENDER + "22" }}
         >
-          <p className="font-hand font-bold text-foreground">Median (middle)</p>
+          <p className="font-hand font-bold text-foreground">
+            Median (middle)
+          </p>
           <p className="font-hand text-xs text-foreground mt-1">
-            Sort the values and pick the middle one. <b>Outliers don't bother it.</b>
+            Sort the values and pick the middle one.{" "}
+            <b>Outliers don&apos;t bother it.</b>
           </p>
         </div>
       </div>
 
+      <RikuSays>
+        Mean is easily bullied by outliers. Median just ignores them. Character
+        matters!
+      </RikuSays>
+
       <InfoBox variant="amber">
-        The mean tells you "what's the perfect balance point?" The median
-        tells you "what's the typical value, ignoring weirdos?". Both are
-        useful — for different questions!
+        The mean tells you &quot;what&apos;s the perfect balance point?&quot;
+        The median tells you &quot;what&apos;s the typical value, ignoring
+        weirdos?&quot;. Both are useful — for different questions!
       </InfoBox>
     </div>
   );
@@ -450,13 +333,83 @@ const SCENARIOS = [
   },
 ];
 
+// Small demo: a few "normal" houses and a mansion that drags the mean
+const HOUSE_PRICES_NORMAL = [35, 40, 42, 45, 48, 50, 52, 55];
+const HOUSE_PRICES_WITH_MANSION = [...HOUSE_PRICES_NORMAL, 500];
+
+function computeStats(arr: number[]) {
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+  const median =
+    sorted.length % 2 === 1
+      ? sorted[Math.floor(sorted.length / 2)]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+  return { mean, median };
+}
+
 function ScenariosTab() {
   const [picks, setPicks] = useState<Record<number, string>>({});
+  const [showMansion, setShowMansion] = useState(false);
+
+  const data = showMansion ? HOUSE_PRICES_WITH_MANSION : HOUSE_PRICES_NORMAL;
+  const { mean, median } = computeStats(data);
+
+  const outlierBars = [
+    { label: "mean", value: Number(mean.toFixed(1)), color: CORAL },
+    { label: "median", value: Number(median.toFixed(1)), color: LAVENDER },
+  ];
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Real talk: most &quot;average&quot; news headlines mean the arithmetic
+        mean. That&apos;s fine — UNTIL a single weirdo shows up. Then the mean
+        lies and the median saves you.
+      </RikuSays>
+
+      {/* Interactive outlier demo */}
+      <div className="card-sketchy p-4 space-y-3" style={{ background: "#fffdf5" }}>
+        <p className="font-hand text-sm font-bold text-foreground text-center">
+          Slide the outlier: flip the switch to drop a mansion into the
+          neighborhood.
+        </p>
+
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              playClick();
+              setShowMansion((v) => !v);
+            }}
+            className="btn-sketchy font-hand text-xs"
+            style={{ background: showMansion ? CORAL : YELLOW }}
+          >
+            {showMansion
+              ? "Remove the 500k mansion"
+              : "Add a 500k mansion"}
+          </button>
+        </div>
+
+        <BarChart
+          data={outlierBars}
+          width={520}
+          height={220}
+          yLabel="price (lakhs)"
+          animateOnMount={false}
+        />
+
+        <p className="font-hand text-xs text-muted-foreground text-center">
+          Houses: [{data.join(", ")}]
+        </p>
+        <p className="font-hand text-xs text-foreground text-center">
+          {showMansion
+            ? "See how the mean jumped but the median barely blinked? That's why median wins here."
+            : "Without the outlier, mean and median are almost the same."}
+        </p>
+      </div>
+
       <p className="font-hand text-base text-foreground text-center">
-        For each situation, would you trust the <b>mean</b> or the <b>median</b>?
+        For each situation, would you trust the <b>mean</b> or the{" "}
+        <b>median</b>?
       </p>
 
       <div className="space-y-3">
@@ -472,7 +425,7 @@ function ScenariosTab() {
                   ? correct
                     ? "#e8fff5"
                     : "#ffe8e8"
-                  : PAPER,
+                  : "#fffdf5",
               }}
             >
               <div className="flex items-center gap-3 mb-3">
@@ -490,23 +443,23 @@ function ScenariosTab() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
-                      const ok = "mean" === s.use;
-                      ok ? playSuccess() : playClick();
+                      if ("mean" === s.use) playSuccess();
+                      else playClick();
                       setPicks({ ...picks, [i]: "mean" });
                     }}
                     className="flex-1 btn-sketchy-outline font-hand text-sm"
-                    style={{ background: YELLOW + "33" }}
+                    style={{ background: CORAL + "22" }}
                   >
                     Mean
                   </button>
                   <button
                     onClick={() => {
-                      const ok = "median" === s.use;
-                      ok ? playSuccess() : playClick();
+                      if ("median" === s.use) playSuccess();
+                      else playClick();
                       setPicks({ ...picks, [i]: "median" });
                     }}
                     className="flex-1 btn-sketchy-outline font-hand text-sm"
-                    style={{ background: MINT + "33" }}
+                    style={{ background: LAVENDER + "22" }}
                   >
                     Median
                   </button>
@@ -516,7 +469,9 @@ function ScenariosTab() {
                   <p className="font-hand text-sm font-bold text-foreground">
                     {correct ? "✓ Correct!" : "✗ Better choice: " + s.use}
                   </p>
-                  <p className="font-hand text-sm text-foreground mt-1">{s.why}</p>
+                  <p className="font-hand text-sm text-foreground mt-1">
+                    {s.why}
+                  </p>
                 </div>
               )}
             </div>
@@ -532,9 +487,11 @@ function ScenariosTab() {
           <Trophy className="w-8 h-8 mx-auto text-foreground" />
           <p className="font-hand text-lg font-bold text-foreground mt-2">
             You scored{" "}
-            {Object.entries(picks).filter(
-              ([i, v]) => v === SCENARIOS[Number(i)].use
-            ).length}{" "}
+            {
+              Object.entries(picks).filter(
+                ([i, v]) => v === SCENARIOS[Number(i)].use,
+              ).length
+            }{" "}
             / {SCENARIOS.length}
           </p>
           <button
@@ -547,9 +504,14 @@ function ScenariosTab() {
         </div>
       )}
 
+      <RikuSays>
+        Rule of paw: if you spot an outlier, reach for the median. It just
+        keeps its cool.
+      </RikuSays>
+
       <InfoBox variant="green">
-        Rule of thumb: if the data has outliers, use the <b>median</b>. If it's
-        nice and clustered, the <b>mean</b> is fine.
+        Rule of thumb: if the data has outliers, use the <b>median</b>. If
+        it&apos;s nice and clustered, the <b>mean</b> is fine.
       </InfoBox>
     </div>
   );
@@ -575,10 +537,12 @@ const quizQuestions = [
     question: "What is the median of [2, 5, 7, 9, 100]?",
     options: ["5", "7", "24.6", "100"],
     correctIndex: 1,
-    explanation: "Sorted, the middle value is 7. Notice the median ignored the outlier 100.",
+    explanation:
+      "Sorted, the middle value is 7. Notice the median ignored the outlier 100.",
   },
   {
-    question: "If salaries at a company are mostly $50k but the CEO makes $5 million, which gives a more honest 'typical' salary?",
+    question:
+      "If salaries at a company are mostly $50k but the CEO makes $5 million, which gives a more honest 'typical' salary?",
     options: ["Mean", "Median", "Both equal", "Neither works"],
     correctIndex: 1,
     explanation:
@@ -618,7 +582,7 @@ export default function L32_AveragesActivity() {
         content: <ScenariosTab />,
       },
     ],
-    []
+    [],
   );
 
   return (

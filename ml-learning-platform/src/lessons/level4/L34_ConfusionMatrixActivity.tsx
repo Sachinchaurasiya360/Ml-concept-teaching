@@ -5,8 +5,13 @@ import { Grid3X3, Sliders, AlertCircle } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
+import {
+  ConfusionMatrixViz,
+  generateClassification2D,
+  type Point,
+} from "@/components/viz/ml-algorithms";
+import { ScatterPlot } from "@/components/viz/data-viz";
 
-const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
 const MINT = "#4ecdc4";
 const YELLOW = "#ffd93d";
@@ -15,152 +20,128 @@ const PEACH = "#ffb88c";
 const PAPER = "#fffdf5";
 
 /* ------------------------------------------------------------------ */
-/*  Tab 1 – The Four Outcomes (visual)                                 */
+/*  Riku — local dialogue helper                                       */
 /* ------------------------------------------------------------------ */
 
-function FourOutcomesTab() {
-  const [hovered, setHovered] = useState<string | null>(null);
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">
+        {children}
+      </p>
+    </div>
+  );
+}
 
-  const cells = [
-    {
-      key: "tp",
-      label: "True Positive",
-      sub: "Predicted YES, was YES",
-      example: "Model said it's a cat 🐱 — and it really IS a cat. ✓",
-      color: MINT,
-      emoji: "✅",
-    },
-    {
-      key: "fp",
-      label: "False Positive",
-      sub: "Predicted YES, was NO",
-      example: "Model said it's a cat 🐱 — but it's actually a dog 🐶. False alarm!",
-      color: PEACH,
-      emoji: "⚠️",
-    },
-    {
-      key: "fn",
-      label: "False Negative",
-      sub: "Predicted NO, was YES",
-      example: "Model said NOT a cat — but it really IS a cat. Missed it!",
-      color: CORAL,
-      emoji: "❌",
-    },
-    {
-      key: "tn",
-      label: "True Negative",
-      sub: "Predicted NO, was NO",
-      example: "Model said NOT a cat — and it's a dog 🐶. Correct rejection!",
-      color: SKY,
-      emoji: "✅",
-    },
-  ];
+/* ------------------------------------------------------------------ */
+/*  Tab 1 – The Four Outcomes (preset scenarios)                      */
+/* ------------------------------------------------------------------ */
+
+type Preset = {
+  key: string;
+  title: string;
+  labels: [string, string];
+  tp: number;
+  tn: number;
+  fp: number;
+  fn: number;
+  takeaway: string;
+  color: string;
+};
+
+const PRESETS: Preset[] = [
+  {
+    key: "spam",
+    title: "Spam filter 📧",
+    labels: ["spam", "not spam"],
+    tp: 42,
+    tn: 48,
+    fp: 3,
+    fn: 7,
+    takeaway:
+      "High accuracy, but those 3 FPs are real emails stuck in spam — one of them might be the job offer you were waiting for.",
+    color: SKY,
+  },
+  {
+    key: "cancer",
+    title: "Cancer screening 🏥",
+    labels: ["has disease", "healthy"],
+    tp: 18,
+    tn: 70,
+    fp: 8,
+    fn: 4,
+    takeaway:
+      "Those 4 False Negatives are patients told they're fine when they're not. In medicine, missing a real case is the worst kind of wrong.",
+    color: CORAL,
+  },
+  {
+    key: "fraud",
+    title: "Credit fraud 💳",
+    labels: ["fraud", "legit"],
+    tp: 25,
+    tn: 150,
+    fp: 10,
+    fn: 5,
+    takeaway:
+      "The 10 False Positives are real purchases flagged as fraud — a minor annoyance. The 5 False Negatives are actual fraud getting through. Cost: real money.",
+    color: YELLOW,
+  },
+];
+
+function FourOutcomesTab() {
+  const [activeKey, setActiveKey] = useState<string>(PRESETS[0].key);
+  const active = PRESETS.find((p) => p.key === activeKey) ?? PRESETS[0];
 
   return (
     <div className="space-y-4">
       <p className="font-hand text-base text-foreground text-center">
-        Every prediction lands in ONE of four boxes. Hover or tap each.
+        Every prediction lands in ONE of four boxes. Pick a scenario to see how.
       </p>
 
-      <div className="card-sketchy notebook-grid p-4" style={{ background: PAPER }}>
-        <svg viewBox="0 0 460 320" className="w-full max-w-[520px] mx-auto">
-          <defs>
-            <radialGradient id="cm-tp" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#7ee0d8" />
-              <stop offset="100%" stopColor={MINT} />
-            </radialGradient>
-            <radialGradient id="cm-tn" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#94caff" />
-              <stop offset="100%" stopColor={SKY} />
-            </radialGradient>
-            <radialGradient id="cm-fp" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ffd0b3" />
-              <stop offset="100%" stopColor={PEACH} />
-            </radialGradient>
-            <radialGradient id="cm-fn" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ff8a8a" />
-              <stop offset="100%" stopColor={CORAL} />
-            </radialGradient>
-          </defs>
+      <RikuSays>
+        True positive: we said yes, it was yes. False positive: we said yes, it
+        was no. False positive = confidently wrong. We've all been there.
+      </RikuSays>
 
-          {/* Column headers */}
-          <text x={170} y={30} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[12px] font-bold">Actual: YES</text>
-          <text x={340} y={30} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[12px] font-bold">Actual: NO</text>
-
-          {/* Row headers */}
-          <text x={50} y={110} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[12px] font-bold">Pred: YES</text>
-          <text x={50} y={230} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[12px] font-bold">Pred: NO</text>
-
-          {(() => {
-            const cellMeta = [
-              { c: cells[0], x: 100, y: 50, gradId: "cm-tp", glowColor: MINT, kind: "good" },  // TP
-              { c: cells[1], x: 270, y: 50, gradId: "cm-fp", glowColor: PEACH, kind: "bad" },  // FP
-              { c: cells[2], x: 100, y: 170, gradId: "cm-fn", glowColor: CORAL, kind: "bad" }, // FN
-              { c: cells[3], x: 270, y: 170, gradId: "cm-tn", glowColor: SKY, kind: "good" },  // TN
-            ];
-            return cellMeta.map((m) => {
-              const isHover = hovered === m.c.key;
-              return (
-                <g key={m.c.key}
-                  onMouseEnter={() => setHovered(m.c.key)}
-                  onMouseLeave={() => setHovered(null)}
-                  onClick={() => setHovered(m.c.key)}
-                  style={{ cursor: "pointer" }}>
-                  {m.kind === "bad" && (
-                    <circle cx={m.x + 70} cy={m.y + 50} r={28}
-                      fill="none" stroke={m.glowColor} strokeWidth={3}
-                      className="fire-ring" />
-                  )}
-                  <rect x={m.x} y={m.y} width={140} height={100} rx={16}
-                    fill={`url(#${m.gradId})`} stroke={INK}
-                    strokeWidth={isHover ? 4 : 2.5}
-                    className={m.kind === "good" ? "pulse-glow" : ""}
-                    style={m.kind === "good" ? { color: m.glowColor } : undefined} />
-                  <text x={m.x + 70} y={m.y + 50} textAnchor="middle"
-                    fontFamily="Kalam" className="text-[24px] font-bold" fill="#fff">
-                    {m.c.emoji}
-                  </text>
-                  <text x={m.x + 70} y={m.y + 78} textAnchor="middle"
-                    fontFamily="Kalam" className="text-[12px] font-bold" fill="#fff">
-                    {m.c.label}
-                  </text>
-                </g>
-              );
-            });
-          })()}
-        </svg>
+      {/* Scenario switcher */}
+      <div className="flex gap-2 flex-wrap justify-center">
+        {PRESETS.map((p) => (
+          <button
+            key={p.key}
+            onClick={() => setActiveKey(p.key)}
+            className="px-3 py-1.5 rounded-lg border-2 border-foreground font-hand text-xs font-bold transition-all"
+            style={{
+              background: activeKey === p.key ? p.color : PAPER,
+              boxShadow: activeKey === p.key ? "2px 2px 0 #2b2a35" : "none",
+            }}
+          >
+            {p.title}
+          </button>
+        ))}
       </div>
 
-      {/* Detail card */}
+      {/* Confusion Matrix viz */}
+      <ConfusionMatrixViz
+        tp={active.tp}
+        tn={active.tn}
+        fp={active.fp}
+        fn={active.fn}
+        labels={active.labels}
+      />
+
       <div
         className="card-sketchy p-4"
-        style={{
-          background: hovered
-            ? cells.find((c) => c.key === hovered)!.color + "22"
-            : "#fff8e7",
-          minHeight: 100,
-        }}
+        style={{ background: active.color + "22" }}
       >
-        {hovered ? (
-          (() => {
-            const c = cells.find((x) => x.key === hovered)!;
-            return (
-              <div className="space-y-1">
-                <p className="font-hand text-base font-bold text-foreground">
-                  {c.label} {c.emoji}
-                </p>
-                <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground">
-                  {c.sub}
-                </p>
-                <p className="font-hand text-sm text-foreground">{c.example}</p>
-              </div>
-            );
-          })()
-        ) : (
-          <p className="font-hand text-sm text-muted-foreground italic text-center">
-            Hover over any box to see what it means.
-          </p>
-        )}
+        <p className="font-hand text-sm text-foreground">
+          <b>{active.title}:</b> {active.takeaway}
+        </p>
       </div>
 
       <InfoBox variant="blue">
@@ -172,182 +153,176 @@ function FourOutcomesTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2 – Build your own confusion matrix                            */
+/*  Tab 2 – Build your own matrix (live from a classifier)            */
 /* ------------------------------------------------------------------ */
 
-const ANIMALS: { id: number; name: string; emoji: string; isCat: boolean }[] = [
-  { id: 1, name: "Whiskers", emoji: "🐱", isCat: true },
-  { id: 2, name: "Rex", emoji: "🐶", isCat: false },
-  { id: 3, name: "Mittens", emoji: "🐱", isCat: true },
-  { id: 4, name: "Buddy", emoji: "🐶", isCat: false },
-  { id: 5, name: "Tiger", emoji: "🐱", isCat: true },
-  { id: 6, name: "Max", emoji: "🐶", isCat: false },
-  { id: 7, name: "Luna", emoji: "🐱", isCat: true },
-  { id: 8, name: "Charlie", emoji: "🐶", isCat: false },
-  { id: 9, name: "Shadow", emoji: "🐱", isCat: true },
-  { id: 10, name: "Bella", emoji: "🐶", isCat: false },
-];
-
-// Pre-baked "predictions" so we can demonstrate
-const PREDICTIONS = [true, false, true, false, false, true, true, false, true, false];
-
 function BuildMatrixTab() {
-  const [revealed, setRevealed] = useState<number[]>([]);
+  const [threshold, setThreshold] = useState(50);
+  const [noiseLevel, setNoiseLevel] = useState(1); // 0 = clean, 1 = normal, 2 = chaos
 
-  const tp = ANIMALS.filter((a, i) => a.isCat && PREDICTIONS[i]).length;
-  const tn = ANIMALS.filter((a, i) => !a.isCat && !PREDICTIONS[i]).length;
+  // Labelled dataset: class 1 = "positive" (e.g. cat). We'll classify by
+  // x-coordinate with a movable threshold — then count how predictions
+  // match truth.
+  const basePoints = useMemo<Point[]>(
+    () => generateClassification2D(50, 23),
+    []
+  );
 
-  function reveal(id: number) {
-    if (revealed.includes(id)) return;
-    setRevealed([...revealed, id]);
-  }
+  // Optionally jitter some labels to simulate a noisier problem.
+  const points = useMemo<Point[]>(() => {
+    if (noiseLevel === 0) return basePoints;
+    return basePoints.map((p, i) => {
+      // Flip a fraction of labels deterministically.
+      const flipEvery = noiseLevel === 1 ? 7 : 4;
+      if (i % flipEvery === 0) {
+        return { ...p, label: p.label === 1 ? 0 : 1 };
+      }
+      return p;
+    });
+  }, [basePoints, noiseLevel]);
 
-  function revealAll() {
-    setRevealed(ANIMALS.map((a) => a.id));
-  }
-
-  function reset() {
-    setRevealed([]);
-  }
-
-  const total = ANIMALS.length;
-  const correct = tp + tn;
-  const accuracy = ((correct / total) * 100).toFixed(0);
+  // Classifier rule: if x >= threshold, predict 1 (positive). Simple but
+  // lets students see the matrix respond to a moving decision boundary.
+  const { tp, tn, fp, fn, scatterData } = useMemo(() => {
+    let tp = 0,
+      tn = 0,
+      fp = 0,
+      fn = 0;
+    const scatterData = points.map((p) => {
+      const actual = p.label ?? 0;
+      const predicted = p.x >= threshold ? 1 : 0;
+      let category: "TP" | "TN" | "FP" | "FN";
+      if (predicted === 1 && actual === 1) {
+        tp++;
+        category = "TP";
+      } else if (predicted === 0 && actual === 0) {
+        tn++;
+        category = "TN";
+      } else if (predicted === 1 && actual === 0) {
+        fp++;
+        category = "FP";
+      } else {
+        fn++;
+        category = "FN";
+      }
+      return {
+        x: p.x,
+        y: p.y,
+        category,
+        label: `${category} · actual ${actual}`,
+      };
+    });
+    return { tp, tn, fp, fn, scatterData };
+  }, [points, threshold]);
 
   return (
     <div className="space-y-4">
       <p className="font-hand text-base text-foreground text-center">
-        A model tried to spot cats 🐱. Click each animal to see what happened!
+        Move the threshold. The matrix IS the report card — live.
       </p>
 
+      <RikuSays>
+        Watch what happens: slide the threshold left and the model calls
+        everything "positive". Slide it right and it calls everything
+        "negative". The sweet spot is somewhere in the middle — and the matrix
+        tells you exactly where you are.
+      </RikuSays>
+
+      {/* Scatter — points coloured by outcome */}
       <div className="card-sketchy p-4" style={{ background: PAPER }}>
-        <div className="grid grid-cols-5 gap-2">
-          {ANIMALS.map((a, i) => {
-            const isRevealed = revealed.includes(a.id);
-            const pred = PREDICTIONS[i];
-            const correct = pred === a.isCat;
-            return (
-              <button
-                key={a.id}
-                onClick={() => reveal(a.id)}
-                className="card-sketchy p-2 text-center transition-transform hover:-translate-y-0.5"
-                style={{
-                  background: isRevealed
-                    ? correct
-                      ? MINT + "44"
-                      : CORAL + "44"
-                    : PAPER,
-                }}
-              >
-                <div className="text-2xl">{isRevealed ? a.emoji : "❓"}</div>
-                <p className="font-hand text-[10px] text-foreground">{a.name}</p>
-                {isRevealed && (
-                  <p className="font-hand text-[9px] font-bold text-muted-foreground">
-                    pred: {pred ? "cat" : "not"}
-                  </p>
-                )}
-              </button>
-            );
-          })}
+        <p className="font-hand text-sm font-bold text-foreground text-center mb-2">
+          Predictions on 50 test points (vertical line = decision threshold)
+        </p>
+        <div className="flex justify-center">
+          <ScatterPlot
+            data={scatterData}
+            width={520}
+            height={280}
+            xLabel="feature 1"
+            yLabel="feature 2"
+            categoryColors={{
+              TP: MINT,
+              TN: SKY,
+              FP: PEACH,
+              FN: CORAL,
+            }}
+            pointRadius={6}
+          />
+        </div>
+        <div className="flex gap-3 justify-center mt-2 font-hand text-xs flex-wrap">
+          <Swatch color={MINT} label="TP" />
+          <Swatch color={SKY} label="TN" />
+          <Swatch color={PEACH} label="FP" />
+          <Swatch color={CORAL} label="FN" />
         </div>
       </div>
 
+      {/* Threshold slider */}
+      <div
+        className="card-sketchy p-4 space-y-3"
+        style={{ background: "#fff8e7" }}
+      >
+        <p className="font-hand text-sm font-bold text-foreground">
+          Decision threshold: x ≥ {threshold} → predict positive
+        </p>
+        <input
+          type="range"
+          min={10}
+          max={90}
+          step={2}
+          value={threshold}
+          onChange={(e) => setThreshold(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+
+      {/* Noise toggle */}
       <div className="flex gap-2 justify-center">
-        <button
-          onClick={revealAll}
-          className="btn-sketchy font-hand text-xs"
-          style={{ background: YELLOW }}
-        >
-          Reveal all
-        </button>
-        <button onClick={reset} className="btn-sketchy-outline font-hand text-xs">
-          Reset
-        </button>
+        {[
+          { n: 0, label: "Clean data" },
+          { n: 1, label: "A bit noisy" },
+          { n: 2, label: "Chaos mode" },
+        ].map((opt) => (
+          <button
+            key={opt.n}
+            onClick={() => setNoiseLevel(opt.n)}
+            className="btn-sketchy-outline font-hand text-xs"
+            style={{
+              background: noiseLevel === opt.n ? YELLOW : PAPER,
+            }}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       {/* Live confusion matrix */}
-      {revealed.length > 0 && (
-        <div className="card-sketchy p-4" style={{ background: PAPER }}>
-          <p className="font-hand text-sm font-bold text-foreground text-center mb-3">
-            Confusion Matrix ({revealed.length} of {total} revealed)
-          </p>
-          <div className="grid grid-cols-[60px_1fr_1fr] gap-2 text-center">
-            <div />
-            <div className="font-hand text-[10px] font-bold text-muted-foreground">
-              Actual: cat
-            </div>
-            <div className="font-hand text-[10px] font-bold text-muted-foreground">
-              Actual: not
-            </div>
-            <div className="font-hand text-[10px] font-bold text-muted-foreground self-center">
-              Pred: cat
-            </div>
-            <div
-              className="card-sketchy p-3"
-              style={{ background: MINT + "44" }}
-            >
-              <p className="font-hand text-[10px] font-bold">TP</p>
-              <p className="font-hand text-2xl font-bold text-foreground">
-                {ANIMALS.filter(
-                  (a, i) => a.isCat && PREDICTIONS[i] && revealed.includes(a.id)
-                ).length}
-              </p>
-            </div>
-            <div
-              className="card-sketchy p-3"
-              style={{ background: PEACH + "44" }}
-            >
-              <p className="font-hand text-[10px] font-bold">FP</p>
-              <p className="font-hand text-2xl font-bold text-foreground">
-                {ANIMALS.filter(
-                  (a, i) => !a.isCat && PREDICTIONS[i] && revealed.includes(a.id)
-                ).length}
-              </p>
-            </div>
-            <div className="font-hand text-[10px] font-bold text-muted-foreground self-center">
-              Pred: not
-            </div>
-            <div
-              className="card-sketchy p-3"
-              style={{ background: CORAL + "44" }}
-            >
-              <p className="font-hand text-[10px] font-bold">FN</p>
-              <p className="font-hand text-2xl font-bold text-foreground">
-                {ANIMALS.filter(
-                  (a, i) => a.isCat && !PREDICTIONS[i] && revealed.includes(a.id)
-                ).length}
-              </p>
-            </div>
-            <div
-              className="card-sketchy p-3"
-              style={{ background: SKY + "44" }}
-            >
-              <p className="font-hand text-[10px] font-bold">TN</p>
-              <p className="font-hand text-2xl font-bold text-foreground">
-                {ANIMALS.filter(
-                  (a, i) =>
-                    !a.isCat && !PREDICTIONS[i] && revealed.includes(a.id)
-                ).length}
-              </p>
-            </div>
-          </div>
-
-          {revealed.length === total && (
-            <p className="font-hand text-sm text-center text-foreground mt-3">
-              Accuracy ={" "}
-              <b>
-                {tp + tn} / {total} = {accuracy}%
-              </b>
-            </p>
-          )}
-        </div>
-      )}
+      <ConfusionMatrixViz
+        tp={tp}
+        tn={tn}
+        fp={fp}
+        fn={fn}
+        labels={["positive", "negative"]}
+      />
 
       <InfoBox variant="amber">
-        Notice: even when accuracy is high, the four boxes tell you DIFFERENT
-        stories. The matrix is more honest than a single percentage.
+        Notice: moving one slider changes every cell at once. The four numbers
+        always add up to 50 — but their balance tells a different story at each
+        position.
       </InfoBox>
     </div>
+  );
+}
+
+function Swatch({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1">
+      <span
+        className="inline-block w-3 h-3 rounded-full border-2 border-foreground"
+        style={{ background: color }}
+      />
+      {label}
+    </span>
   );
 }
 
@@ -359,6 +334,11 @@ const STAKES = [
   {
     title: "Spam filter 📧",
     color: SKY,
+    labels: ["spam", "not spam"] as [string, string],
+    tp: 40,
+    tn: 45,
+    fp: 6,
+    fn: 9,
     fpCost: "An important email lands in spam — you miss your job offer.",
     fnCost: "A spam email reaches your inbox — minor annoyance.",
     worse: "FP",
@@ -367,6 +347,11 @@ const STAKES = [
   {
     title: "Cancer detector 🏥",
     color: CORAL,
+    labels: ["has cancer", "healthy"] as [string, string],
+    tp: 22,
+    tn: 68,
+    fp: 8,
+    fn: 2,
     fpCost: "A healthy person gets extra tests — scary but treatable.",
     fnCost: "A sick person is told they're fine — disease grows untreated.",
     worse: "FN",
@@ -375,6 +360,11 @@ const STAKES = [
   {
     title: "Loud fire alarm 🔥",
     color: YELLOW,
+    labels: ["fire", "no fire"] as [string, string],
+    tp: 12,
+    tn: 78,
+    fp: 9,
+    fn: 1,
     fpCost: "Alarm goes off when there's no fire — you're annoyed.",
     fnCost: "Real fire, but no alarm — danger.",
     worse: "FN",
@@ -391,6 +381,11 @@ function StakesTab() {
       <p className="font-hand text-base text-foreground text-center">
         Not all mistakes are equal. Some <b>false positives</b> hurt more — sometimes <b>false negatives</b> do.
       </p>
+
+      <RikuSays>
+        The four numbers always tell a story — but the story changes depending
+        on what you're predicting. Same matrix, totally different stakes.
+      </RikuSays>
 
       <div className="flex gap-2 flex-wrap justify-center">
         {STAKES.map((st, i) => (
@@ -414,6 +409,14 @@ function StakesTab() {
         style={{ background: s.color + "22", animation: "fadeIn 0.3s" }}
       >
         <h3 className="font-hand text-xl font-bold text-foreground">{s.title}</h3>
+
+        <ConfusionMatrixViz
+          tp={s.tp}
+          tn={s.tn}
+          fp={s.fp}
+          fn={s.fn}
+          labels={s.labels}
+        />
 
         <div className="grid sm:grid-cols-2 gap-3">
           <div

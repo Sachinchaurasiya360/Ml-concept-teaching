@@ -1,11 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Tags, Table2, Wand2 } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
-import { playClick, playPop, playSuccess, playError } from "../../utils/sounds";
+import { playClick, playSuccess, playError, playPop } from "../../utils/sounds";
+import { ScatterPlot, BarChart } from "../../components/viz/data-viz";
+import type { DataPoint, BarDatum } from "../../components/viz/data-viz";
+
+/* ------------------------------------------------------------------ */
+/*  Riku helper (shared across tabs)                                   */
+/* ------------------------------------------------------------------ */
+
+function RikuSays({ children }: { children: ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
 
 const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
@@ -19,21 +35,45 @@ const PAPER = "#fffdf5";
 /*  Tab 1 – What is a Feature?                                         */
 /* ------------------------------------------------------------------ */
 
-type Fruit = { emoji: string; name: string; color: string; weight: number; bumpy: boolean; label: string };
+type Fruit = {
+  emoji: string;
+  name: string;
+  color: string;
+  weight: number;
+  bumpy: number; // 0 = smooth, 1 = bumpy
+  sweetness: number; // 0-10
+  label: string;
+};
+
 const FRUITS: Fruit[] = [
-  { emoji: "🍎", name: "Apple",  color: "red",    weight: 180, bumpy: false, label: "Apple" },
-  { emoji: "🍊", name: "Orange", color: "orange", weight: 200, bumpy: true,  label: "Orange" },
-  { emoji: "🍋", name: "Lemon",  color: "yellow", weight: 120, bumpy: true,  label: "Lemon" },
-  { emoji: "🍇", name: "Grape",  color: "purple", weight: 8,   bumpy: false, label: "Grape" },
-  { emoji: "🍌", name: "Banana", color: "yellow", weight: 130, bumpy: false, label: "Banana" },
+  { emoji: "🍎", name: "Apple",  color: "red",    weight: 180, bumpy: 0, sweetness: 7, label: "Apple" },
+  { emoji: "🍊", name: "Orange", color: "orange", weight: 200, bumpy: 1, sweetness: 6, label: "Orange" },
+  { emoji: "🍋", name: "Lemon",  color: "yellow", weight: 120, bumpy: 1, sweetness: 2, label: "Lemon" },
+  { emoji: "🍇", name: "Grape",  color: "purple", weight: 8,   bumpy: 0, sweetness: 9, label: "Grape" },
+  { emoji: "🍌", name: "Banana", color: "yellow", weight: 130, bumpy: 0, sweetness: 8, label: "Banana" },
 ];
 
 function FeaturesTab() {
   const [selected, setSelected] = useState(0);
   const f = FRUITS[selected];
 
+  // Feature values for the selected fruit, shown as a bar chart.
+  const featureBars: BarDatum[] = useMemo(
+    () => [
+      { label: "Weight (g)", value: f.weight, color: CORAL },
+      { label: "Bumpy (0/1)", value: f.bumpy * 10, color: LAVENDER },
+      { label: "Sweetness", value: f.sweetness * 10, color: SKY },
+    ],
+    [f],
+  );
+
   return (
     <div className="space-y-4">
+      <RikuSays>
+        A <b>feature</b> is an input clue we measure. A <b>label</b> is the answer we want.
+        Simple as that. Click a fruit and watch its three clue-values light up.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
         A <span style={{ color: CORAL, fontWeight: 700 }}>feature</span> is a clue we measure about something.
         A <span style={{ color: MINT, fontWeight: 700 }}>label</span> is the answer we want to predict.
@@ -83,20 +123,16 @@ function FeaturesTab() {
         </div>
 
         <div className="font-hand text-sm font-bold mb-2" style={{ color: INK }}>FEATURES (the clues):</div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div className="card-sketchy p-3 hover:wobble" style={{ background: "linear-gradient(135deg, #fff0ed, #ffd0c4)" }}>
-            <div className="text-xs font-hand" style={{ color: INK, opacity: 0.6 }}>Color</div>
-            <div className="font-hand font-bold text-lg" style={{ color: CORAL }}>{f.color}</div>
-          </div>
-          <div className="card-sketchy p-3 hover:wobble" style={{ background: "linear-gradient(135deg, #e6f7ff, #b8e0ff)" }}>
-            <div className="text-xs font-hand" style={{ color: INK, opacity: 0.6 }}>Weight</div>
-            <div className="font-hand font-bold text-lg" style={{ color: SKY }}>{f.weight} g</div>
-          </div>
-          <div className="card-sketchy p-3 hover:wobble" style={{ background: "linear-gradient(135deg, #f0e6ff, #d9c4f9)" }}>
-            <div className="text-xs font-hand" style={{ color: INK, opacity: 0.6 }}>Bumpy skin?</div>
-            <div className="font-hand font-bold text-lg" style={{ color: LAVENDER }}>{f.bumpy ? "yes" : "no"}</div>
-          </div>
-        </div>
+        <BarChart
+          data={featureBars}
+          width={520}
+          height={220}
+          yLabel="value"
+          title={`Feature values for ${f.name}`}
+        />
+        <p className="font-hand text-xs mt-2 text-center" style={{ color: INK, opacity: 0.7 }}>
+          Three features, one label. That's literally the shape of every supervised ML example.
+        </p>
       </div>
 
       <InfoBox variant="blue">
@@ -107,7 +143,7 @@ function FeaturesTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2 – X and y Table                                              */
+/*  Tab 2 – X and y Table  (now with a scatter)                        */
 /* ------------------------------------------------------------------ */
 
 const STUDENTS = [
@@ -121,16 +157,33 @@ const STUDENTS = [
 
 function TableTab() {
   const [highlighted, setHighlighted] = useState<"X" | "y" | null>(null);
+  const [xAxis, setXAxis] = useState<"hours" | "slept">("hours");
+
+  // Each row → scatter point. x = feature, y = label (score).
+  const scatterData: DataPoint[] = useMemo(
+    () =>
+      STUDENTS.map((s) => ({
+        x: xAxis === "hours" ? s.hours : s.slept,
+        y: s.score,
+        label: `${s.hours}h studied, ${s.slept}h slept`,
+      })),
+    [xAxis],
+  );
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Every ML dataset is a table. The input columns are <b>X</b> (features). The answer column is <b>y</b> (label).
+        That's it. Even giant neural nets read tables like this — just bigger.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
-        Every ML dataset is a table. The clue columns are called{" "}
+        The clue columns are called{" "}
         <span style={{ color: CORAL, fontWeight: 700 }}>X</span> (features). The answer column is called{" "}
         <span style={{ color: MINT, fontWeight: 700 }}>y</span> (label).
       </p>
 
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-2 justify-center flex-wrap">
         <button
           onClick={() => { playClick(); setHighlighted(highlighted === "X" ? null : "X"); }}
           className="btn-sketchy font-hand"
@@ -206,6 +259,39 @@ function TableTab() {
         </table>
       </div>
 
+      <div className="card-sketchy" style={{ background: PAPER }}>
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <span className="font-hand text-sm font-bold" style={{ color: INK }}>
+            Plot the rows: X axis →
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { playClick(); setXAxis("hours"); }}
+              className="btn-sketchy font-hand text-xs"
+              style={{ background: xAxis === "hours" ? CORAL : PAPER, color: xAxis === "hours" ? PAPER : INK }}
+            >
+              Hours studied
+            </button>
+            <button
+              onClick={() => { playClick(); setXAxis("slept"); }}
+              className="btn-sketchy font-hand text-xs"
+              style={{ background: xAxis === "slept" ? CORAL : PAPER, color: xAxis === "slept" ? PAPER : INK }}
+            >
+              Hours slept
+            </button>
+          </div>
+        </div>
+        <ScatterPlot
+          data={scatterData}
+          width={520}
+          height={300}
+          xLabel={xAxis === "hours" ? "Hours studied (X)" : "Hours slept (X)"}
+          yLabel="Test score (y)"
+          title="Each table row becomes one point"
+          showTrendLine
+        />
+      </div>
+
       <div className="card-sketchy text-center font-hand text-sm" style={{ background: "#fff8dc", color: INK }}>
         Goal: learn a rule that takes <span style={{ color: CORAL, fontWeight: 700 }}>X</span> →{" "}
         predicts <span style={{ color: MINT, fontWeight: 700 }}>y</span>. That's <b>literally</b> what every supervised ML model does.
@@ -219,7 +305,7 @@ function TableTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 3 – Good vs Bad Features (game)                                */
+/*  Tab 3 – Good vs Bad Features (game) + feature-space scatter        */
 /* ------------------------------------------------------------------ */
 
 type FeatureItem = { id: string; label: string; useful: boolean };
@@ -248,9 +334,38 @@ const FEATURE_BANK: { goal: string; items: FeatureItem[] }[] = [
   },
 ];
 
+/** Hand-crafted two-feature view of the "rain tomorrow" problem.
+ *  Good features separate the classes; bad ones turn into noise. */
+const GOOD_SPACE: DataPoint[] = [
+  { x: 82, y: 88, category: "rain" },
+  { x: 76, y: 72, category: "rain" },
+  { x: 90, y: 80, category: "rain" },
+  { x: 68, y: 65, category: "rain" },
+  { x: 85, y: 92, category: "rain" },
+  { x: 30, y: 18, category: "no rain" },
+  { x: 22, y: 10, category: "no rain" },
+  { x: 40, y: 25, category: "no rain" },
+  { x: 15, y: 30, category: "no rain" },
+  { x: 35, y: 12, category: "no rain" },
+];
+
+const BAD_SPACE: DataPoint[] = [
+  { x: 2, y: 55, category: "rain" },
+  { x: 7, y: 40, category: "rain" },
+  { x: 1, y: 65, category: "rain" },
+  { x: 4, y: 50, category: "rain" },
+  { x: 9, y: 45, category: "rain" },
+  { x: 3, y: 48, category: "no rain" },
+  { x: 6, y: 60, category: "no rain" },
+  { x: 2, y: 42, category: "no rain" },
+  { x: 8, y: 58, category: "no rain" },
+  { x: 5, y: 52, category: "no rain" },
+];
+
 function FeatureGameTab() {
   const [round, setRound] = useState(0);
   const [picks, setPicks] = useState<Record<string, "useful" | "useless">>({});
+  const [space, setSpace] = useState<"good" | "bad">("good");
   const data = FEATURE_BANK[round];
 
   const correctCount = data.items.filter(
@@ -263,8 +378,15 @@ function FeatureGameTab() {
     setPicks({});
   };
 
+  const scatter = space === "good" ? GOOD_SPACE : BAD_SPACE;
+
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Features are the "input clues". The label is the answer we want. Pick <i>useful</i> clues and the
+        classes peel apart cleanly. Pick <i>useless</i> ones and everything smears into one sad blob.
+      </RikuSays>
+
       <div className="card-sketchy text-center" style={{ background: YELLOW }}>
         <div className="font-hand text-sm" style={{ color: INK, opacity: 0.7 }}>YOUR GOAL</div>
         <div className="font-hand text-xl font-bold" style={{ color: INK }}>{data.goal}</div>
@@ -292,7 +414,7 @@ function FeatureGameTab() {
             >
               <div className="font-hand text-sm flex-1" style={{ color: INK }}>{it.label}</div>
               <button
-                onClick={() => { const correct = it.useful; correct ? playSuccess() : playError(); setPicks((p) => ({ ...p, [it.id]: "useful" })); }}
+                onClick={() => { const correct = it.useful; if (correct) playSuccess(); else playError(); setPicks((p) => ({ ...p, [it.id]: "useful" })); }}
                 className="font-hand text-xs"
                 style={{
                   padding: "6px 10px",
@@ -308,7 +430,7 @@ function FeatureGameTab() {
                 ✓ useful
               </button>
               <button
-                onClick={() => { const correct = !it.useful; correct ? playSuccess() : playError(); setPicks((p) => ({ ...p, [it.id]: "useless" })); }}
+                onClick={() => { const correct = !it.useful; if (correct) playSuccess(); else playError(); setPicks((p) => ({ ...p, [it.id]: "useless" })); }}
                 className="font-hand text-xs"
                 style={{
                   padding: "6px 10px",
@@ -341,6 +463,43 @@ function FeatureGameTab() {
           </button>
         </div>
       )}
+
+      {/* Feature-space comparison: same labels, different features. */}
+      <div className="card-sketchy" style={{ background: PAPER }}>
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <span className="font-hand text-sm font-bold" style={{ color: INK }}>
+            Same data, different features:
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => { playClick(); setSpace("good"); }}
+              className="btn-sketchy font-hand text-xs"
+              style={{ background: space === "good" ? MINT : PAPER, color: space === "good" ? PAPER : INK }}
+            >
+              Good features
+            </button>
+            <button
+              onClick={() => { playClick(); setSpace("bad"); }}
+              className="btn-sketchy font-hand text-xs"
+              style={{ background: space === "bad" ? CORAL : PAPER, color: space === "bad" ? PAPER : INK }}
+            >
+              Useless features
+            </button>
+          </div>
+        </div>
+        <ScatterPlot
+          data={scatter}
+          width={520}
+          height={300}
+          xLabel={space === "good" ? "Humidity" : "Favorite color hue"}
+          yLabel={space === "good" ? "Cloud cover %" : "Number of cats"}
+          title={space === "good" ? "Clean separation — model can learn" : "All mashed together — no signal"}
+          categoryColors={{ rain: SKY, "no rain": YELLOW }}
+        />
+        <p className="font-hand text-xs mt-2 text-center" style={{ color: INK, opacity: 0.7 }}>
+          Same rows. Just different feature columns. <b>Good features split the classes; bad features blur them.</b>
+        </p>
+      </div>
 
       <InfoBox variant="amber">
         In the real world, ML engineers spend <b>more than half their time</b> just choosing and cleaning features. Models matter — but features matter more.

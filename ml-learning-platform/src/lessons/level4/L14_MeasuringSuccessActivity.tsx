@@ -1,377 +1,396 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Grid3X3, Scale, BarChart3, RotateCcw } from "lucide-react";
+import { Grid3X3, Scale, BarChart3 } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop, playSuccess, playError } from "../../utils/sounds";
+import {
+  ConfusionMatrixViz,
+  LogisticRegressionViz,
+  type Point,
+} from "@/components/viz/ml-algorithms";
 
-const INK = "#2b2a35";
+/* ------------------------------------------------------------------ */
+/*  Riku (red panda mascot) dialogue helper                            */
+/* ------------------------------------------------------------------ */
 
-/* Animated metric meter */
-function MetricMeter({ label, value, color, glow }: { label: string; value: number; color: string; glow: string }) {
-  const v = Math.max(0, Math.min(100, value));
+function RikuSays({ children }: { children: React.ReactNode }) {
   return (
-    <div className="card-sketchy p-3" style={{ background: "#fff" }}>
-      <div className="flex justify-between font-hand text-xs font-bold text-foreground mb-1">
-        <span>{label}</span>
-        <span style={{ color }}>{v.toFixed(0)}%</span>
-      </div>
-      <svg viewBox="0 0 200 18" className="w-full">
-        <defs>
-          <linearGradient id={`mm-${label}`} x1="0" x2="1">
-            <stop offset="0%" stopColor={glow} />
-            <stop offset="100%" stopColor={color} />
-          </linearGradient>
-        </defs>
-        <rect x={1} y={1} width={198} height={16} rx={8} fill="#f3efe6" stroke={INK} strokeWidth={2} />
-        <rect x={3} y={3} width={(196 * v) / 100} height={12} rx={6}
-          fill={`url(#mm-${label})`}
-          className="pulse-glow"
-          style={{ color, transition: "width 0.5s ease" }} />
-      </svg>
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">
+        {children}
+      </p>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Seeded PRNG                                                        */
+/*  Tab 1  Confusion Matrix — interactive sliders + presets           */
 /* ------------------------------------------------------------------ */
 
-/* mulberry32 PRNG removed  not needed in this lesson */
+type Preset = {
+  id: string;
+  label: string;
+  tp: number;
+  tn: number;
+  fp: number;
+  fn: number;
+  blurb: string;
+};
 
-/* ------------------------------------------------------------------ */
-/*  Tab 1  Confusion Matrix                                          */
-/* ------------------------------------------------------------------ */
-
-interface EmailItem {
-  id: number;
-  text: string;
-  isSpam: boolean;
-}
+const PRESETS: Preset[] = [
+  {
+    id: "great",
+    label: "A good classifier",
+    tp: 42,
+    tn: 50,
+    fp: 3,
+    fn: 5,
+    blurb:
+      "Most predictions land on the mint diagonal. A few slip-ups, but overall very solid.",
+  },
+  {
+    id: "trigger-happy",
+    label: "Trigger-happy",
+    tp: 48,
+    tn: 20,
+    fp: 30,
+    fn: 2,
+    blurb:
+      "Catches almost every positive (high recall) but flags tons of negatives too (low precision).",
+  },
+  {
+    id: "cautious",
+    label: "Overly cautious",
+    tp: 12,
+    tn: 55,
+    fp: 1,
+    fn: 32,
+    blurb:
+      "Barely predicts positive. The few it does flag are usually right (high precision) — but it misses most real positives (low recall).",
+  },
+  {
+    id: "lazy",
+    label: "Lazy baseline",
+    tp: 0,
+    tn: 95,
+    fp: 0,
+    fn: 5,
+    blurb:
+      "Predicts 'not spam' every single time. 95% accurate and completely useless. Welcome to the accuracy trap.",
+  },
+];
 
 function ConfusionMatrix() {
-  const emails = useMemo<EmailItem[]>(() => [
-    { id: 0, text: "You won $1,000,000!", isSpam: true },
-    { id: 1, text: "Meeting at 3pm today", isSpam: false },
-    { id: 2, text: "Buy cheap meds now!!!", isSpam: true },
-    { id: 3, text: "Project update attached", isSpam: false },
-    { id: 4, text: "Claim your free prize", isSpam: true },
-    { id: 5, text: "Dinner plans tonight?", isSpam: false },
-    { id: 6, text: "Limited time offer!!!", isSpam: true },
-    { id: 7, text: "Please review the PR", isSpam: false },
-    { id: 8, text: "Congratulations winner!", isSpam: true },
-    { id: 9, text: "Team standup notes", isSpam: false },
-    { id: 10, text: "ACT NOW free gift", isSpam: true },
-    { id: 11, text: "Lunch tomorrow?", isSpam: false },
-  ], []);
+  const [tp, setTp] = useState(PRESETS[0].tp);
+  const [tn, setTn] = useState(PRESETS[0].tn);
+  const [fp, setFp] = useState(PRESETS[0].fp);
+  const [fn, setFn] = useState(PRESETS[0].fn);
+  const [activePreset, setActivePreset] = useState<string>("great");
 
-  const [predictions, setPredictions] = useState<Record<number, boolean>>({});
-  const currentIdx = Object.keys(predictions).length;
-  const currentEmail = currentIdx < emails.length ? emails[currentIdx] : null;
-
-  const handlePredict = useCallback((predictedSpam: boolean) => {
-    if (!currentEmail) return;
-    const isCorrect = predictedSpam === currentEmail.isSpam;
-    if (isCorrect) playSuccess(); else playError();
-    setPredictions((prev) => ({ ...prev, [currentEmail.id]: predictedSpam }));
-  }, [currentEmail]);
-
-  const reset = useCallback(() => {
-    playClick();
-    setPredictions({});
+  const applyPreset = useCallback((p: Preset) => {
+    playPop();
+    setTp(p.tp);
+    setTn(p.tn);
+    setFp(p.fp);
+    setFn(p.fn);
+    setActivePreset(p.id);
   }, []);
 
-  // Compute confusion matrix values
-  const { tp, fp, tn, fn } = useMemo(() => {
-    let tp = 0, fp = 0, tn = 0, fn = 0;
-    for (const email of emails) {
-      if (predictions[email.id] === undefined) continue;
-      const pred = predictions[email.id];
-      if (pred && email.isSpam) tp++;
-      else if (pred && !email.isSpam) fp++;
-      else if (!pred && !email.isSpam) tn++;
-      else if (!pred && email.isSpam) fn++;
-    }
-    return { tp, fp, tn, fn };
-  }, [emails, predictions]);
+  const blurb = useMemo(
+    () => PRESETS.find((p) => p.id === activePreset)?.blurb,
+    [activePreset],
+  );
 
-  const total = tp + fp + tn + fn;
-  const accuracy = total > 0 ? ((tp + tn) / total * 100).toFixed(0) : "";
-  const precision = (tp + fp) > 0 ? (tp / (tp + fp) * 100).toFixed(0) : "";
-  const recall = (tp + fn) > 0 ? (tp / (tp + fn) * 100).toFixed(0) : "";
+  // A little slider helper
+  function Slider({
+    label,
+    value,
+    setValue,
+    color,
+  }: {
+    label: string;
+    value: number;
+    setValue: (v: number) => void;
+    color: string;
+  }) {
+    return (
+      <div className="space-y-1">
+        <div className="flex justify-between font-hand text-xs font-bold">
+          <span style={{ color }}>{label}</span>
+          <span className="text-foreground">{value}</span>
+        </div>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={value}
+          onChange={(e) => {
+            playClick();
+            setValue(Number(e.target.value));
+            setActivePreset("");
+          }}
+          className="w-full accent-indigo-500"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        A confusion matrix is the therapy session your model needs after
+        getting things wrong. Four little boxes that tell you{" "}
+        <em>exactly</em> how your classifier messed up — not just that it did.
+      </RikuSays>
+
       <div className="card-sketchy notebook-grid p-5 space-y-4">
-        <h3 className="font-hand text-sm font-bold text-foreground text-center">Classify each email as Spam or Not Spam  watch the confusion matrix build!</h3>
+        <h3 className="font-hand text-sm font-bold text-foreground text-center">
+          Drag the sliders (or pick a preset) and watch the metrics update
+        </h3>
 
-        {/* Current email */}
-        {currentEmail ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 max-w-md mx-auto text-center space-y-3">
-            <p className="text-xs text-slate-500">Email {currentIdx + 1} of {emails.length}</p>
-            <p className="text-sm font-medium text-slate-800">"{currentEmail.text}"</p>
-            <div className="flex justify-center gap-3">
-              <button onClick={() => handlePredict(true)}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors">
-                Spam
-              </button>
-              <button onClick={() => handlePredict(false)}
-                className="px-4 py-2 bg-green-100 text-green-700 rounded-lg text-xs font-medium hover:bg-green-200 transition-colors">
-                Not Spam
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-            <p className="text-sm font-semibold text-green-700">All emails classified!</p>
-            <button onClick={reset} className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors">
-              <RotateCcw className="w-3.5 h-3.5" /> Try Again
+        {/* Preset buttons */}
+        <div className="flex justify-center gap-2 flex-wrap">
+          {PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => applyPreset(p)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium border-2 transition-all ${
+                activePreset === p.id
+                  ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                  : "border-slate-200 text-slate-600 hover:border-slate-400"
+              }`}
+            >
+              {p.label}
             </button>
-          </div>
-        )}
-
-        {/* Confusion matrix SVG */}
-        <div className="flex justify-center overflow-x-auto">
-          <svg viewBox="0 0 360 300" className="w-full max-w-[400px]">
-            {/* Title */}
-            <text x={180} y={20} textAnchor="middle" className="text-[12px] fill-slate-700 font-bold">Confusion Matrix</text>
-
-            {/* Column headers */}
-            <text x={230} y={55} textAnchor="middle" className="text-[10px] fill-slate-600 font-semibold">Predicted</text>
-            <text x={185} y={75} textAnchor="middle" className="text-[10px] fill-red-600 font-medium">Spam</text>
-            <text x={285} y={75} textAnchor="middle" className="text-[10px] fill-green-600 font-medium">Not Spam</text>
-
-            {/* Row headers */}
-            <text x={50} y={115} textAnchor="middle" className="text-[10px] fill-slate-600 font-semibold" transform="rotate(-90, 50, 115)">Actual</text>
-            <text x={105} y={120} textAnchor="middle" className="text-[10px] fill-red-600 font-medium">Spam</text>
-            <text x={105} y={200} textAnchor="middle" className="text-[10px] fill-green-600 font-medium">Not Spam</text>
-
-            {/* TP cell */}
-            <rect x={135} y={85} width={100} height={60} rx={6} fill="#dcfce7" stroke="#22c55e" strokeWidth={1.5} />
-            <text x={185} y={112} textAnchor="middle" className="text-[20px] fill-green-700 font-bold">{tp}</text>
-            <text x={185} y={132} textAnchor="middle" className="text-[8px] fill-green-600">True Positive</text>
-
-            {/* FN cell */}
-            <rect x={235} y={85} width={100} height={60} rx={6} fill="#fee2e2" stroke="#ef4444" strokeWidth={1.5} />
-            <text x={285} y={112} textAnchor="middle" className="text-[20px] fill-red-700 font-bold">{fn}</text>
-            <text x={285} y={132} textAnchor="middle" className="text-[8px] fill-red-600">False Negative</text>
-
-            {/* FP cell */}
-            <rect x={135} y={165} width={100} height={60} rx={6} fill="#fef9c3" stroke="#eab308" strokeWidth={1.5} />
-            <text x={185} y={192} textAnchor="middle" className="text-[20px] fill-amber-700 font-bold">{fp}</text>
-            <text x={185} y={212} textAnchor="middle" className="text-[8px] fill-amber-600">False Positive</text>
-
-            {/* TN cell */}
-            <rect x={235} y={165} width={100} height={60} rx={6} fill="#dcfce7" stroke="#22c55e" strokeWidth={1.5} />
-            <text x={285} y={192} textAnchor="middle" className="text-[20px] fill-green-700 font-bold">{tn}</text>
-            <text x={285} y={212} textAnchor="middle" className="text-[8px] fill-green-600">True Negative</text>
-
-            {/* Metrics */}
-            <text x={60} y={260} className="text-[10px] fill-slate-700 font-medium">Accuracy: {accuracy}%</text>
-            <text x={170} y={260} className="text-[10px] fill-slate-700 font-medium">Precision: {precision}%</text>
-            <text x={280} y={260} className="text-[10px] fill-slate-700 font-medium">Recall: {recall}%</text>
-          </svg>
+          ))}
         </div>
 
-        {/* Animated metric meters */}
-        {total > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <MetricMeter label="Accuracy" value={Number(accuracy) || 0} color="#b18cf2" glow="#c9adf7" />
-            <MetricMeter label="Precision" value={Number(precision) || 0} color="#6bb6ff" glow="#94caff" />
-            <MetricMeter label="Recall" value={Number(recall) || 0} color="#4ecdc4" glow="#7ee0d8" />
-          </div>
-        )}
+        {/* Sliders */}
+        <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+          <Slider
+            label="TP"
+            value={tp}
+            setValue={setTp}
+            color="var(--accent-mint)"
+          />
+          <Slider
+            label="FN"
+            value={fn}
+            setValue={setFn}
+            color="var(--accent-coral)"
+          />
+          <Slider
+            label="FP"
+            value={fp}
+            setValue={setFp}
+            color="var(--accent-coral)"
+          />
+          <Slider
+            label="TN"
+            value={tn}
+            setValue={setTn}
+            color="var(--accent-mint)"
+          />
+        </div>
 
-        {/* Progress */}
-        <svg viewBox="0 0 400 14" className="w-full">
-          <rect x={1} y={1} width={398} height={12} rx={6} fill="#f3efe6" stroke={INK} strokeWidth={2} />
-          <rect x={3} y={3} width={Math.max(0, (394 * currentIdx) / emails.length)} height={8} rx={4}
-            fill="#ffd93d" className="pulse-glow" style={{ color: "#ffd93d", transition: "width 0.4s" }} />
-        </svg>
+        {/* The library matrix */}
+        <ConfusionMatrixViz
+          tp={tp}
+          tn={tn}
+          fp={fp}
+          fn={fn}
+          labels={["Spam", "Not Spam"]}
+        />
+
+        {blurb && (
+          <p className="font-hand text-xs text-center text-slate-600 italic max-w-md mx-auto">
+            {blurb}
+          </p>
+        )}
       </div>
 
+      <RikuSays>
+        Fun fact: the four boxes have nothing to hide. If precision is great
+        but recall is bad, the matrix will literally show you a fat FN
+        column. No more &ldquo;my accuracy is 95% so I&apos;m done&rdquo;
+        nonsense.
+      </RikuSays>
+
       <InfoBox variant="blue" title="Confusion Matrix Explained">
-        <strong>True Positive (TP)</strong>: Correctly identified spam. <strong>True Negative (TN)</strong>: Correctly identified non-spam. <strong>False Positive (FP)</strong>: Called it spam but it wasn't. <strong>False Negative (FN)</strong>: Missed the spam.
+        <strong>True Positive (TP)</strong>: Correctly identified spam.{" "}
+        <strong>True Negative (TN)</strong>: Correctly identified non-spam.{" "}
+        <strong>False Positive (FP)</strong>: Called it spam but it wasn&apos;t.{" "}
+        <strong>False Negative (FN)</strong>: Missed the spam.
       </InfoBox>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2  Accuracy Isn't Everything                                  */
+/*  Tab 2  Accuracy Isn't Everything — live classifier + matrix       */
 /* ------------------------------------------------------------------ */
 
+// Build an imbalanced dataset: 95 negatives, 5 positives, all in the
+// library's [0, 100] × [0, 100] coordinate space.
+function buildImbalancedData(): Point[] {
+  const pts: Point[] = [];
+  // 95 "healthy" negatives spread broadly over the left/lower region.
+  let s = 1;
+  const rand = () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+  for (let i = 0; i < 95; i++) {
+    pts.push({
+      x: 10 + rand() * 55,
+      y: 10 + rand() * 55,
+      label: 0,
+    });
+  }
+  // 5 "sick" positives clustered in the upper-right.
+  for (let i = 0; i < 5; i++) {
+    pts.push({
+      x: 65 + rand() * 25,
+      y: 65 + rand() * 25,
+      label: 1,
+    });
+  }
+  return pts;
+}
+
 function AccuracyIsntEverything() {
-  const [threshold, setThreshold] = useState(50);
+  const data = useMemo(() => buildImbalancedData(), []);
 
-  // Imbalanced dataset: 95 healthy, 5 sick
-  const totalHealthy = 95;
-  const totalSick = 5;
-  const total = totalHealthy + totalSick;
-
-  // As threshold increases, the model is more "cautious" about predicting sick
-  // Low threshold = predicts many as sick (high recall, low precision)
-  // High threshold = predicts few as sick (low recall, higher precision)
-  const predictedSick = useMemo(() => {
-    if (threshold <= 20) return 15; // predicts many sick (includes false positives)
-    if (threshold <= 40) return 8;
-    if (threshold <= 50) return 5;
-    if (threshold <= 60) return 3;
-    if (threshold <= 80) return 1;
-    return 0; // predicts nobody sick
-  }, [threshold]);
-
-  const truePositives = useMemo(() => {
-    if (threshold <= 20) return 5;
-    if (threshold <= 40) return 4;
-    if (threshold <= 50) return 3;
-    if (threshold <= 60) return 2;
-    if (threshold <= 80) return 1;
-    return 0;
-  }, [threshold]);
-
-  const fp = predictedSick - truePositives;
-  const fn = totalSick - truePositives;
-  const tn = totalHealthy - fp;
-  const tp = truePositives;
-
-  const accuracy = ((tp + tn) / total * 100).toFixed(1);
-  const precisionVal = (tp + fp) > 0 ? (tp / (tp + fp) * 100).toFixed(0) : "0";
-  const recallVal = (tp + fn) > 0 ? (tp / (tp + fn) * 100).toFixed(0) : "0";
-
-  // Lazy model always predicts healthy
-  const lazyAccuracy = ((totalHealthy) / total * 100).toFixed(0);
+  // "Always predict healthy" baseline — this is the accuracy trap.
+  const totalPositive = data.filter((p) => p.label === 1).length;
+  const totalNegative = data.length - totalPositive;
+  const lazyAccuracy = ((totalNegative / data.length) * 100).toFixed(0);
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Accuracy alone lies. If 99% of emails aren&apos;t spam, &ldquo;always
+        say not spam&rdquo; is 99% accurate and completely useless. Let&apos;s
+        prove it with a real (imbalanced) dataset.
+      </RikuSays>
+
       <div className="card-sketchy notebook-grid p-5 space-y-4">
-        <h3 className="font-hand text-sm font-bold text-foreground text-center">A "lazy" model shows why accuracy alone can be misleading</h3>
+        <h3 className="font-hand text-sm font-bold text-foreground text-center">
+          The &ldquo;lazy&rdquo; model vs a real classifier
+        </h3>
 
         {/* Lazy model callout */}
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-w-md mx-auto">
           <p className="text-xs text-red-700">
-            <strong>Lazy Model:</strong> Always predicts "Healthy"  gets <strong>{lazyAccuracy}% accuracy</strong>!
-            But it misses ALL {totalSick} sick patients.
+            <strong>Lazy Model:</strong> Always predicts &ldquo;Healthy&rdquo;
+            — gets <strong>{lazyAccuracy}% accuracy</strong>! But it misses
+            ALL {totalPositive} sick patients.
           </p>
         </div>
 
-        {/* Threshold slider */}
-        <div className="max-w-md mx-auto space-y-1">
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-medium text-slate-600 w-20">Threshold:</span>
-            <input type="range" min={10} max={90} step={10} value={threshold}
-              onChange={(e) => { playClick(); setThreshold(Number(e.target.value)); }}
-              className="flex-1 accent-indigo-500" />
-            <span className="text-sm font-bold text-indigo-700 w-8">{threshold}</span>
-          </div>
-          <p className="text-[10px] text-slate-400 text-center">Low = catch more sick (but more false alarms) | High = fewer false alarms (but miss sick people)</p>
-        </div>
+        <ConfusionMatrixViz
+          tp={0}
+          tn={totalNegative}
+          fp={0}
+          fn={totalPositive}
+          labels={["Sick", "Healthy"]}
+        />
 
-        {/* Population visualization */}
-        <div className="flex justify-center overflow-x-auto">
-          <svg viewBox="0 0 500 160" className="w-full max-w-[520px]">
-            {/* Background */}
-            <rect x={10} y={10} width={480} height={140} rx={8} fill="#f8fafc" stroke="#e2e8f0" strokeWidth={1} />
+        <RikuSays>
+          See the empty TP box? 95% accuracy, 0% recall. The lazy model
+          never catches a single sick patient. In medicine, that&apos;s a
+          disaster.
+        </RikuSays>
 
-            {/* People dots  100 total */}
-            {Array.from({ length: total }, (_, i) => {
-              const row = Math.floor(i / 20);
-              const col = i % 20;
-              const isSick = i >= totalHealthy;
-              // Simplified: show sick people highlighted
-              const wasCaught = isSick && (i - totalHealthy) < tp;
-              const wasFalsePositive = !isSick && i < fp;
-
-              let fill = "#94a3b8"; // default healthy gray
-              if (isSick && wasCaught) fill = "#22c55e"; // caught sick = green
-              else if (isSick && !wasCaught) fill = "#ef4444"; // missed sick = red
-              else if (wasFalsePositive) fill = "#f59e0b"; // false alarm = amber
-              else fill = "#93c5fd"; // healthy = light blue
-
-              return (
-                <circle
-                  key={i}
-                  cx={30 + col * 23}
-                  cy={30 + row * 24}
-                  r={6}
-                  fill={fill}
-                  stroke="#334155"
-                  strokeWidth={0.5}
-                  opacity={0.8}
-                />
-              );
-            })}
-          </svg>
-        </div>
-
-        {/* Legend */}
-        <div className="flex justify-center gap-3 flex-wrap text-[10px] text-slate-600">
-          <span><span className="inline-block w-3 h-3 rounded-full bg-blue-300 mr-1 align-middle" />Healthy (correct)</span>
-          <span><span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-1 align-middle" />Sick (caught)</span>
-          <span><span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-1 align-middle" />Sick (missed)</span>
-          <span><span className="inline-block w-3 h-3 rounded-full bg-amber-500 mr-1 align-middle" />False alarm</span>
-        </div>
-
-        {/* Animated metric meters */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-md mx-auto">
-          <MetricMeter label="Accuracy" value={Number(accuracy)} color="#b18cf2" glow="#c9adf7" />
-          <MetricMeter label="Precision" value={Number(precisionVal)} color="#6bb6ff" glow="#94caff" />
-          <MetricMeter label="Recall" value={Number(recallVal)} color="#4ecdc4" glow="#7ee0d8" />
+        <div className="border-t-2 border-dashed border-slate-300 pt-4">
+          <p className="font-hand text-xs text-center text-slate-600 mb-3">
+            Now try a real classifier — drag the weight sliders below to draw
+            your own decision boundary on the same imbalanced data:
+          </p>
+          <LogisticRegressionViz data={data} />
         </div>
       </div>
 
+      <RikuSays>
+        Watch what happens when the boundary moves: one nudge and you catch
+        all the sick folks (high recall) but start false-alarming healthy
+        ones (low precision). That tension is why we need more than
+        accuracy.
+      </RikuSays>
+
       <InfoBox variant="amber" title="The Accuracy Trap">
-        With imbalanced data, a model can get high accuracy by just predicting the majority class. <strong>Precision</strong> tells us how many of our positive predictions were correct. <strong>Recall</strong> tells us how many actual positives we caught. For medical diagnosis, recall is critical  missing a sick patient is dangerous!
+        With imbalanced data, a model can get high accuracy by just predicting
+        the majority class. <strong>Precision</strong> tells us how many of
+        our positive predictions were correct. <strong>Recall</strong> tells
+        us how many actual positives we caught. For medical diagnosis, recall
+        is critical — missing a sick patient is dangerous!
       </InfoBox>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 3  Compare Models                                             */
+/*  Tab 3  Compare Models — presets + live confusion matrix           */
 /* ------------------------------------------------------------------ */
 
-interface ModelMetrics {
+interface ModelPreset {
   name: string;
-  accuracy: number;
-  precision: number;
-  recall: number;
-  f1: number;
+  tp: number;
+  tn: number;
+  fp: number;
+  fn: number;
 }
 
-const MODELS: ModelMetrics[] = [
-  { name: "Model A", accuracy: 92, precision: 88, recall: 65, f1: 75 },
-  { name: "Model B", accuracy: 85, precision: 72, recall: 95, f1: 82 },
-  { name: "Model C", accuracy: 89, precision: 90, recall: 87, f1: 88 },
+const MODELS: ModelPreset[] = [
+  // Model A — high precision, lower recall (good spam filter)
+  { name: "Model A", tp: 65, tn: 185, fp: 9, fn: 35 },
+  // Model B — high recall, lower precision (good medical screen)
+  { name: "Model B", tp: 95, tn: 155, fp: 37, fn: 5 },
+  // Model C — balanced (best F1)
+  { name: "Model C", tp: 87, tn: 180, fp: 10, fn: 13 },
 ];
 
 interface Scenario {
   title: string;
   description: string;
-  bestModel: number; // index
+  bestModel: number;
   reason: string;
 }
 
 const SCENARIOS: Scenario[] = [
   {
     title: "Medical Diagnosis",
-    description: "Detecting whether a patient has a disease. Missing a sick patient could be life-threatening.",
+    description:
+      "Detecting whether a patient has a disease. Missing a sick patient could be life-threatening.",
     bestModel: 1,
-    reason: "Model B has the highest recall (95%)  it catches almost all sick patients, which is critical in healthcare.",
+    reason:
+      "Model B has the highest recall — it catches almost all sick patients, which is critical in healthcare.",
   },
   {
     title: "Spam Filter",
-    description: "Filtering spam emails. Marking a real email as spam is very annoying.",
+    description:
+      "Filtering spam emails. Marking a real email as spam is very annoying.",
     bestModel: 0,
-    reason: "Model A has the highest precision (88%) with high accuracy  it rarely marks real emails as spam.",
+    reason:
+      "Model A has the highest precision — it rarely marks real emails as spam.",
   },
   {
     title: "Movie Recommendation",
-    description: "Suggesting movies a user might enjoy. We want a good overall balance.",
+    description:
+      "Suggesting movies a user might enjoy. We want a good overall balance.",
     bestModel: 2,
-    reason: "Model C has the best F1 score (88%)  the best balance of precision and recall for general recommendations.",
+    reason:
+      "Model C has the best F1 score — the best balance of precision and recall for general recommendations.",
   },
 ];
 
@@ -381,16 +400,12 @@ function CompareModels() {
   const [revealed, setRevealed] = useState(false);
 
   const scenario = SCENARIOS[selectedScenario];
-  const metrics: Array<{ key: string; label: string; color: string }> = [
-    { key: "accuracy", label: "Accuracy", color: "#6366f1" },
-    { key: "precision", label: "Precision", color: "#3b82f6" },
-    { key: "recall", label: "Recall", color: "#22c55e" },
-    { key: "f1", label: "F1 Score", color: "#f59e0b" },
-  ];
+  const activeModel = MODELS[userPick ?? 0];
 
   const handlePick = useCallback((modelIdx: number) => {
     playPop();
     setUserPick(modelIdx);
+    setRevealed(false);
   }, []);
 
   const handleReveal = useCallback(() => {
@@ -409,73 +424,29 @@ function CompareModels() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Three models, three different personalities. One&apos;s cautious,
+        one&apos;s trigger-happy, one&apos;s balanced. Pick the right
+        teammate for the job — the matrix will show you why.
+      </RikuSays>
+
       <div className="card-sketchy notebook-grid p-5 space-y-4">
-        <h3 className="font-hand text-sm font-bold text-foreground text-center">Compare 3 models  which is best for each scenario?</h3>
-
-        {/* Bar chart */}
-        <div className="flex justify-center overflow-x-auto">
-          <svg viewBox="0 0 500 240" className="w-full max-w-[540px]">
-            {/* Y axis labels */}
-            {[0, 25, 50, 75, 100].map((v) => {
-              const y = 200 - (v / 100) * 180;
-              return (
-                <g key={v}>
-                  <text x={30} y={y + 4} textAnchor="end" className="text-[9px] fill-slate-500">{v}</text>
-                  <line x1={35} y1={y} x2={480} y2={y} stroke="#e2e8f0" strokeWidth={0.5} />
-                </g>
-              );
-            })}
-
-            {/* Bars for each model */}
-            {MODELS.map((model, mi) => {
-              const groupX = 60 + mi * 150;
-              return (
-                <g key={mi}>
-                  <text x={groupX + 50} y={225} textAnchor="middle" className="text-[10px] fill-slate-700 font-semibold">
-                    {model.name}
-                  </text>
-                  {metrics.map((m, bi) => {
-                    const val = model[m.key as keyof ModelMetrics] as number;
-                    const barH = (val / 100) * 180;
-                    const barX = groupX + bi * 25;
-                    return (
-                      <g key={m.key}>
-                        <rect x={barX} y={200 - barH} width={20} height={barH}
-                          fill={m.color} rx={2} opacity={0.85}
-                          style={{ transition: "all 0.3s" }} />
-                        <text x={barX + 10} y={195 - barH} textAnchor="middle"
-                          className="text-[8px] fill-slate-600 font-medium">{val}</text>
-                      </g>
-                    );
-                  })}
-                </g>
-              );
-            })}
-
-            {/* Axis */}
-            <line x1={35} y1={200} x2={480} y2={200} stroke="#334155" strokeWidth={1.5} />
-          </svg>
-        </div>
-
-        {/* Legend */}
-        <div className="flex justify-center gap-3 text-[10px] text-slate-600 flex-wrap">
-          {metrics.map((m) => (
-            <span key={m.key}>
-              <span className="inline-block w-3 h-3 rounded mr-1 align-middle" style={{ backgroundColor: m.color }} />
-              {m.label}
-            </span>
-          ))}
-        </div>
+        <h3 className="font-hand text-sm font-bold text-foreground text-center">
+          Compare 3 models — which is best for each scenario?
+        </h3>
 
         {/* Scenario selector */}
         <div className="flex justify-center gap-2 flex-wrap">
           {SCENARIOS.map((s, i) => (
-            <button key={i} onClick={() => switchScenario(i)}
+            <button
+              key={i}
+              onClick={() => switchScenario(i)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                 selectedScenario === i
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                   : "border-slate-200 text-slate-600 hover:border-slate-400"
-              }`}>
+              }`}
+            >
               {s.title}
             </button>
           ))}
@@ -483,47 +454,80 @@ function CompareModels() {
 
         {/* Scenario description */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-w-md mx-auto text-center">
-          <p className="text-xs font-semibold text-slate-700">{scenario.title}</p>
+          <p className="text-xs font-semibold text-slate-700">
+            {scenario.title}
+          </p>
           <p className="text-xs text-slate-500 mt-1">{scenario.description}</p>
         </div>
 
         {/* Model selection */}
         <div className="flex justify-center gap-3">
           {MODELS.map((model, i) => (
-            <button key={i} onClick={() => handlePick(i)}
+            <button
+              key={i}
+              onClick={() => handlePick(i)}
               className={`px-4 py-2 rounded-lg text-xs font-medium border-2 transition-all ${
                 userPick === i
                   ? "border-indigo-500 bg-indigo-50 text-indigo-700 shadow-md"
                   : "border-slate-200 text-slate-600 hover:border-slate-400"
-              }`}>
+              }`}
+            >
               {model.name}
             </button>
           ))}
         </div>
 
+        {/* Live confusion matrix for the picked model */}
+        {userPick !== null && (
+          <ConfusionMatrixViz
+            tp={activeModel.tp}
+            tn={activeModel.tn}
+            fp={activeModel.fp}
+            fn={activeModel.fn}
+          />
+        )}
+
         {userPick !== null && !revealed && (
           <div className="flex justify-center">
-            <button onClick={handleReveal}
-              className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors">
+            <button
+              onClick={handleReveal}
+              className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors"
+            >
               Check Answer
             </button>
           </div>
         )}
 
         {revealed && (
-          <div className={`text-center p-3 rounded-lg text-xs ${
-            userPick === scenario.bestModel ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-          }`}>
+          <div
+            className={`text-center p-3 rounded-lg text-xs ${
+              userPick === scenario.bestModel
+                ? "bg-green-100 text-green-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+          >
             <p className="font-semibold">
-              {userPick === scenario.bestModel ? "Correct!" : `The best choice is ${MODELS[scenario.bestModel].name}.`}
+              {userPick === scenario.bestModel
+                ? "Correct!"
+                : `The best choice is ${MODELS[scenario.bestModel].name}.`}
             </p>
             <p className="mt-1">{scenario.reason}</p>
           </div>
         )}
       </div>
 
+      <RikuSays>
+        No single metric wins every game. Medical? Recall. Spam? Precision.
+        Recommendations? F1. The matrix lets you see all four at once so you
+        can pick with your eyes open.
+      </RikuSays>
+
       <InfoBox variant="indigo" title="Which Metric Matters?">
-        There is no single "best" metric  it depends on the problem! For <strong>medical diagnosis</strong>, recall matters most (catch all sick patients). For <strong>spam filtering</strong>, precision matters (don't block real emails). <strong>F1 score</strong> balances both.
+        There is no single &ldquo;best&rdquo; metric — it depends on the
+        problem! For <strong>medical diagnosis</strong>, recall matters most
+        (catch all sick patients). For <strong>spam filtering</strong>,
+        precision matters (don&apos;t block real emails).{" "}
+        <strong>F1 score</strong> balances both.
       </InfoBox>
     </div>
   );
@@ -543,7 +547,8 @@ const quizQuestions = [
       "A spam email missed by the filter",
     ],
     correctIndex: 1,
-    explanation: "A True Positive means the model correctly predicted the positive class  in this case, correctly catching a spam email.",
+    explanation:
+      "A True Positive means the model correctly predicted the positive class  in this case, correctly catching a spam email.",
   },
   {
     question: "Why can high accuracy be misleading with imbalanced data?",
@@ -554,7 +559,8 @@ const quizQuestions = [
       "Because accuracy only works with 2 classes",
     ],
     correctIndex: 1,
-    explanation: "With 95% healthy and 5% sick patients, predicting everyone as healthy gives 95% accuracy while missing all sick patients!",
+    explanation:
+      "With 95% healthy and 5% sick patients, predicting everyone as healthy gives 95% accuracy while missing all sick patients!",
   },
   {
     question: "When is recall the most important metric?",
@@ -565,7 +571,8 @@ const quizQuestions = [
       "When you have perfectly balanced data",
     ],
     correctIndex: 2,
-    explanation: "Recall measures how many actual positives were caught. In medical diagnosis, missing a sick patient (false negative) could be life-threatening, so high recall is critical.",
+    explanation:
+      "Recall measures how many actual positives were caught. In medical diagnosis, missing a sick patient (false negative) could be life-threatening, so high recall is critical.",
   },
   {
     question: "What does the F1 score measure?",
@@ -576,7 +583,8 @@ const quizQuestions = [
       "The speed of the model",
     ],
     correctIndex: 2,
-    explanation: "The F1 score is the harmonic mean of precision and recall, giving a single number that balances both metrics. It's useful when you need both precision and recall to be good.",
+    explanation:
+      "The F1 score is the harmonic mean of precision and recall, giving a single number that balances both metrics. It's useful when you need both precision and recall to be good.",
   },
 ];
 
@@ -628,7 +636,7 @@ export default function L14_MeasuringSuccessActivity() {
             "Byte: With tools like the confusion matrix, precision, recall, and F1 score. Let me show you!",
           ]}
           conceptTitle="Key Concept"
-          conceptSummary="Accuracy measures how often the model is correct overall, but it can be misleading with imbalanced data. Precision measures how many positive predictions were actually correct. Recall measures how many actual positives were caught. The F1 score balances both. Which metric matters most depends on the problem!"
+          conceptSummary="Accuracy measures how often the model is correct overall, but it can be misleading with imbalanced data. Precision measures how many positive predictions were actually correct. Recall measures how many actual positives we caught. The F1 score balances both. Which metric matters most depends on the problem!"
         />
       }
     />

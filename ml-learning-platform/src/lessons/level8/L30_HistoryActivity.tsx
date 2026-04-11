@@ -6,6 +6,10 @@ import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop } from "../../utils/sounds";
+import { Perceptron, NeuralNetwork } from "../../components/viz/neural-network";
+import { SVMViz, DecisionTreeViz } from "../../components/viz/ml-algorithms";
+import { MiniCNN } from "../../components/viz/cnn";
+import { LineChart } from "../../components/viz/data-viz";
 
 /* Sketchy palette */
 const INK = "#2b2a35";
@@ -16,6 +20,24 @@ const LAVENDER = "#b18cf2";
 const SKY = "#6bb6ff";
 const PEACH = "#ffb88c";
 const PAPER = "#fffdf5";
+
+/* ------------------------------------------------------------------ */
+/*  Riku — warm, nerdy red-panda narrator                              */
+/* ------------------------------------------------------------------ */
+
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Milestones                                                         */
@@ -147,7 +169,7 @@ const MILESTONES: Milestone[] = [
 /* ------------------------------------------------------------------ */
 
 function TimelineTab() {
-  const [selected, setSelected] = useState(2); // start on Perceptron
+  const [selected, setSelected] = useState(3); // start on Perceptron
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const minYear = MILESTONES[0].year;
@@ -156,7 +178,9 @@ function TimelineTab() {
 
   // Auto-scroll selected dot into view
   useEffect(() => {
-    const el = scrollRef.current?.querySelector(`[data-idx="${selected}"]`) as HTMLElement | null;
+    const el = scrollRef.current?.querySelector(
+      `[data-idx="${selected}"]`
+    ) as HTMLElement | null;
     el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
   }, [selected]);
 
@@ -173,6 +197,12 @@ function TimelineTab() {
         </p>
       </div>
 
+      <RikuSays>
+        Eighty years, one story. Every dot on this line is a moment when somebody
+        refused to give up on the idea that a machine could learn. Scroll slowly —
+        each of these people was just a nerdy kid once, like you.
+      </RikuSays>
+
       {/* Horizontal timeline */}
       <div
         ref={scrollRef}
@@ -186,11 +216,6 @@ function TimelineTab() {
             height="130"
             style={{ position: "absolute", top: 0, left: 0 }}
           >
-            <defs>
-              <pattern id="dash" patternUnits="userSpaceOnUse" width="8" height="2">
-                <rect width="5" height="2" fill={INK} />
-              </pattern>
-            </defs>
             <line
               x1="2%"
               y1="65"
@@ -249,7 +274,10 @@ function TimelineTab() {
               <button
                 key={mi.year}
                 data-idx={i}
-                onClick={() => { playPop(); setSelected(i); }}
+                onClick={() => {
+                  playPop();
+                  setSelected(i);
+                }}
                 className="absolute -translate-x-1/2 flex flex-col items-center group hover:scale-110 transition-transform"
                 style={{ left: `${pct}%`, top: above ? 0 : 70 }}
               >
@@ -275,7 +303,9 @@ function TimelineTab() {
                     borderColor: INK,
                     width: isSelected ? 22 : 14,
                     height: isSelected ? 22 : 14,
-                    boxShadow: isSelected ? `0 0 0 4px ${mi.color}55` : "1px 1px 0 #2b2a35",
+                    boxShadow: isSelected
+                      ? `0 0 0 4px ${mi.color}55`
+                      : "1px 1px 0 #2b2a35",
                   }}
                 />
                 {!above && (
@@ -321,11 +351,10 @@ function TimelineTab() {
             </h3>
           </div>
         </div>
-        <p className="font-hand text-base text-foreground leading-relaxed">{m.what}</p>
-        <div
-          className="card-sketchy p-3"
-          style={{ background: PAPER }}
-        >
+        <p className="font-hand text-base text-foreground leading-relaxed">
+          {m.what}
+        </p>
+        <div className="card-sketchy p-3" style={{ background: PAPER }}>
           <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">
             Why it mattered
           </p>
@@ -336,7 +365,10 @@ function TimelineTab() {
       {/* Prev / Next */}
       <div className="flex gap-2 justify-center">
         <button
-          onClick={() => { playClick(); setSelected((s) => Math.max(0, s - 1)); }}
+          onClick={() => {
+            playClick();
+            setSelected((s) => Math.max(0, s - 1));
+          }}
           disabled={selected === 0}
           className="btn-sketchy-outline font-hand text-sm"
           style={{ opacity: selected === 0 ? 0.5 : 1 }}
@@ -347,7 +379,10 @@ function TimelineTab() {
           {selected + 1} / {MILESTONES.length}
         </span>
         <button
-          onClick={() => { playClick(); setSelected((s) => Math.min(MILESTONES.length - 1, s + 1)); }}
+          onClick={() => {
+            playClick();
+            setSelected((s) => Math.min(MILESTONES.length - 1, s + 1));
+          }}
           disabled={selected === MILESTONES.length - 1}
           className="btn-sketchy font-hand text-sm"
           style={{
@@ -358,6 +393,12 @@ function TimelineTab() {
           Later →
         </button>
       </div>
+
+      <RikuSays>
+        The first 30 years were mostly dreams. The next 30 were mostly winter. The
+        last 15? Fireworks. Timing, data, and a little bit of GPU magic — that's
+        the whole recipe.
+      </RikuSays>
 
       <style>{`
         @keyframes fadeInSlide {
@@ -370,10 +411,21 @@ function TimelineTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2 – Three Big Eras (visual)                                    */
+/*  Tab 2 – Three Big Eras (with hero viz per era)                     */
 /* ------------------------------------------------------------------ */
 
-const ERAS = [
+interface EraDef {
+  name: string;
+  range: string;
+  color: string;
+  icon: string;
+  points: string[];
+  summary: string;
+  hero: React.ReactNode;
+  rikuLine: string;
+}
+
+const ERAS: EraDef[] = [
   {
     name: "The Dream Era",
     range: "1943–1980",
@@ -386,6 +438,13 @@ const ERAS = [
       "Reality hit: too little compute, too little data",
     ],
     summary: "Big ideas, tiny machines. The seeds were planted but couldn't grow yet.",
+    hero: (
+      <div className="flex justify-center">
+        <Perceptron width={360} height={360} />
+      </div>
+    ),
+    rikuLine:
+      "1958 was the year of the perceptron. One neuron. Very optimistic. We're still building on this same idea today, just… with more neurons. Many, many more neurons.",
   },
   {
     name: "The Slow Climb",
@@ -394,11 +453,14 @@ const ERAS = [
     icon: "🧗",
     points: [
       "Backpropagation revived neural nets (1986)",
-      "Computers got faster every year",
+      "Classical ML ruled the 90s: SVMs, decision trees, kNN",
       "Deep Blue beat Kasparov at chess (1997)",
-      "Researchers kept the dream alive in quiet labs",
+      "Researchers kept the neural dream alive in quiet labs",
     ],
     summary: "Slow progress, stubborn scientists. The world didn't notice — yet.",
+    hero: <SVMViz />,
+    rikuLine:
+      "The 'AI winter' was the 80s and early 90s when everyone thought neural networks were a dead end. Classical tools like SVMs quietly won every benchmark. Turns out neural nets just needed more data and compute. Timing is everything.",
   },
   {
     name: "The Explosion",
@@ -411,7 +473,25 @@ const ERAS = [
       "Transformers changed language forever (2017)",
       "ChatGPT brought AI to everyone (2022)",
     ],
-    summary: "Everything changed. AI went from lab curiosity to world-changing tech in just 10 years.",
+    summary:
+      "Everything changed. AI went from lab curiosity to world-changing tech in just 10 years.",
+    hero: (
+      <MiniCNN
+        animate
+        title="AlexNet-style CNN (2012)"
+        layers={[
+          { type: "conv", filters: 6, kernelSize: 3, label: "Conv 3×3" },
+          { type: "pool", size: 2, pooling: "max", label: "MaxPool" },
+          { type: "conv", filters: 12, kernelSize: 3, label: "Conv 3×3" },
+          { type: "pool", size: 2, pooling: "max", label: "MaxPool" },
+          { type: "conv", filters: 16, kernelSize: 3, label: "Conv 3×3" },
+          { type: "flatten", label: "Flatten" },
+          { type: "dense", units: 10, label: "Dense 1000" },
+        ]}
+      />
+    ),
+    rikuLine:
+      "2012 is when AlexNet won ImageNet by a huge margin using a CNN on GPUs. That's the year deep learning ate machine learning. Everything after is fallout.",
   },
 ];
 
@@ -421,8 +501,15 @@ function ErasTab() {
   return (
     <div className="space-y-4">
       <p className="font-hand text-base text-foreground text-center">
-        ML history fits into three big eras. Click each to expand.
+        ML history fits into three big eras. Click each to expand — and see the
+        algorithm that defined it.
       </p>
+
+      <RikuSays>
+        Each era had a hero algorithm. In the Dream Era it was the single
+        perceptron. In the Slow Climb it was SVMs and decision trees. In the
+        Explosion? Convolutional nets, with every Nvidia GPU on Earth behind them.
+      </RikuSays>
 
       <div className="space-y-3">
         {ERAS.map((era, i) => {
@@ -456,7 +543,10 @@ function ErasTab() {
                 </span>
               </button>
               {open && (
-                <div className="px-4 pb-4 space-y-3" style={{ animation: "fadeIn 0.3s" }}>
+                <div
+                  className="px-4 pb-4 space-y-3"
+                  style={{ animation: "fadeIn 0.3s" }}
+                >
                   <ul className="space-y-1.5 ml-2">
                     {era.points.map((p) => (
                       <li
@@ -468,12 +558,23 @@ function ErasTab() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Hero viz for this era */}
+                  <div
+                    className="card-sketchy p-3"
+                    style={{ background: PAPER }}
+                  >
+                    {era.hero}
+                  </div>
+
+                  <RikuSays>{era.rikuLine}</RikuSays>
+
                   <div
                     className="card-sketchy p-3"
                     style={{ background: PAPER }}
                   >
                     <p className="font-hand text-sm font-bold text-foreground italic">
-                      "{era.summary}"
+                      &ldquo;{era.summary}&rdquo;
                     </p>
                   </div>
                 </div>
@@ -484,8 +585,8 @@ function ErasTab() {
       </div>
 
       <InfoBox variant="amber">
-        Notice the pattern: huge dreams → cold winters → patient scientists → sudden
-        explosion. Most big ideas in science follow this same shape.
+        Notice the pattern: huge dreams → cold winters → patient scientists →
+        sudden explosion. Most big ideas in science follow this same shape.
       </InfoBox>
       <style>{`@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }`}</style>
     </div>
@@ -493,87 +594,104 @@ function ErasTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 3 – From Perceptron → GPT (visual chain)                       */
+/*  Tab 3 – From Perceptron → GPT (visual chain using real viz)        */
 /* ------------------------------------------------------------------ */
 
-const CHAIN = [
+interface ChainStage {
+  label: string;
+  sub: string;
+  detail: string;
+  color: string;
+  viz: React.ReactNode;
+  rikuLine: string;
+}
+
+const CHAIN_STAGES: ChainStage[] = [
   {
     label: "1 Neuron",
     sub: "Perceptron, 1958",
-    detail: "Could only tell apart 2 simple groups. Cool but limited.",
-    nodes: 1,
-    layers: 1,
+    detail: "Could only tell apart 2 simple groups with a single straight line.",
     color: PEACH,
+    viz: (
+      <div className="flex justify-center">
+        <Perceptron width={320} height={320} />
+      </div>
+    ),
+    rikuLine:
+      "One neuron, two weights, one bias. Drag the sliders if you're curious — this is literally the same math that powers every modern model, just… once.",
   },
   {
-    label: "Few Neurons",
-    sub: "Multi-layer net, 1986",
-    detail: "Stack neurons in layers. Now it can solve harder problems.",
-    nodes: 6,
-    layers: 2,
+    label: "Classical ML",
+    sub: "Decision trees & SVMs, 1990s",
+    detail:
+      "While neural nets slept, classical methods ruled — splitting data into branches, drawing max-margin lines.",
     color: MINT,
+    viz: <DecisionTreeViz />,
+    rikuLine:
+      "The 90s loved decision trees because they were fast, understandable, and didn't need a supercomputer. Neural nets were the weird uncle nobody invited to benchmarks.",
   },
   {
     label: "Deep Network",
     sub: "AlexNet, 2012",
-    detail: "8 layers, 60 million weights, trained on a million images. Won everything.",
-    nodes: 12,
-    layers: 4,
+    detail:
+      "8 layers, 60 million weights, trained on a million images on two gaming GPUs. Won ImageNet by a mile.",
     color: SKY,
+    viz: (
+      <MiniCNN
+        animate
+        title="Deep CNN"
+        layers={[
+          { type: "conv", filters: 6, kernelSize: 3, label: "Conv 3×3" },
+          { type: "pool", size: 2, pooling: "max", label: "Pool" },
+          { type: "conv", filters: 12, kernelSize: 3, label: "Conv 3×3" },
+          { type: "pool", size: 2, pooling: "max", label: "Pool" },
+          { type: "conv", filters: 16, kernelSize: 3, label: "Conv 3×3" },
+          { type: "flatten", label: "Flatten" },
+          { type: "dense", units: 10, label: "Dense" },
+        ]}
+      />
+    ),
+    rikuLine:
+      "Watch the pulse flow left to right. Each stage is millions of little multiplications. This architecture — plus GPUs — is the moment AI stopped being a niche and started being THE thing.",
   },
   {
     label: "Transformer",
     sub: "GPT family, 2017+",
-    detail: "Hundreds of layers, BILLIONS of weights. Reads, writes, codes, talks.",
-    nodes: 24,
-    layers: 6,
+    detail:
+      "Hundreds of layers, billions of weights. Every word looks at every other word. Reads, writes, codes, talks.",
     color: LAVENDER,
+    viz: (
+      <NeuralNetwork
+        layers={[8, 16, 16, 16, 16, 6]}
+        animateFlow
+        width={560}
+        height={320}
+      />
+    ),
+    rikuLine:
+      "You live in the 'large model' era. The network your phone runs today would've been unimaginable in 2010. Modern transformers make this sketch look like a toy.",
   },
 ];
 
 function ChainTab() {
   const [step, setStep] = useState(0);
-  const stage = CHAIN[step];
-
-  // Build node positions
-  const W = 360;
-  const H = 160;
-  const PAD = 30;
-  const nodes = useMemo(() => {
-    const arr: { x: number; y: number; layer: number }[] = [];
-    const perLayer = Math.ceil(stage.nodes / stage.layers);
-    for (let l = 0; l < stage.layers; l++) {
-      const x = PAD + (l * (W - PAD * 2)) / Math.max(1, stage.layers - 1 || 1);
-      const count = l === stage.layers - 1
-        ? stage.nodes - perLayer * (stage.layers - 1)
-        : perLayer;
-      const actualCount = Math.max(1, count);
-      for (let n = 0; n < actualCount; n++) {
-        const y =
-          PAD +
-          ((n + 0.5) * (H - PAD * 2)) /
-            actualCount -
-          (H - PAD * 2) / (actualCount * 2) +
-          ((H - PAD * 2) / actualCount) * 0.5;
-        arr.push({ x, y, layer: l });
-      }
-    }
-    return arr;
-  }, [stage]);
+  const stage = CHAIN_STAGES[step];
 
   return (
     <div className="space-y-5">
       <p className="font-hand text-base text-foreground text-center">
-        Watch how neural networks grew from{" "}
-        <b>1 neuron</b> to <b>billions</b>.
+        Watch how neural networks grew from <b>1 neuron</b> to <b>billions</b>.
       </p>
 
       {/* Step buttons */}
       <div className="flex gap-2 justify-center flex-wrap">
-        {CHAIN.map((c, i) => (
+        {CHAIN_STAGES.map((c, i) => (
           <button
             key={c.label}
-            onClick={() => setStep(i)}
+            onClick={() => {
+              playClick();
+              setStep(i);
+            }}
             className="px-3 py-1.5 rounded-lg border-2 font-hand text-xs font-bold transition-all"
             style={{
               background: step === i ? c.color : PAPER,
@@ -586,60 +704,33 @@ function ChainTab() {
         ))}
       </div>
 
-      {/* Network visualization */}
+      {/* Live viz for the selected step */}
       <div
-        className="card-sketchy p-4 flex justify-center"
-        style={{ background: stage.color + "22" }}
+        key={step}
+        className="card-sketchy p-4"
+        style={{
+          background: stage.color + "22",
+          animation: "fadeInSlide 0.4s ease-out",
+        }}
       >
-        <svg width={W} height={H}>
-          {/* Connections */}
-          {nodes.map((n, i) =>
-            nodes.map((m, j) => {
-              if (m.layer !== n.layer + 1) return null;
-              return (
-                <line
-                  key={`${i}-${j}`}
-                  x1={n.x}
-                  y1={n.y}
-                  x2={m.x}
-                  y2={m.y}
-                  stroke={INK}
-                  strokeWidth="1"
-                  opacity="0.3"
-                />
-              );
-            })
-          )}
-          {/* Nodes */}
-          {nodes.map((n, i) => (
-            <circle
-              key={i}
-              cx={n.x}
-              cy={n.y}
-              r="8"
-              fill={stage.color}
-              stroke={INK}
-              strokeWidth="2"
-              style={{
-                animation: `popIn 0.4s ease-out ${i * 0.04}s both`,
-              }}
-            />
-          ))}
-        </svg>
+        {stage.viz}
       </div>
 
       {/* Stats card */}
       <div
-        key={step}
         className="card-sketchy p-4 space-y-2"
-        style={{ background: PAPER, animation: "fadeInSlide 0.4s ease-out" }}
+        style={{ background: PAPER }}
       >
         <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground">
           {stage.sub}
         </p>
-        <h3 className="font-hand text-2xl font-bold text-foreground">{stage.label}</h3>
+        <h3 className="font-hand text-2xl font-bold text-foreground">
+          {stage.label}
+        </h3>
         <p className="font-hand text-sm text-foreground">{stage.detail}</p>
       </div>
+
+      <RikuSays>{stage.rikuLine}</RikuSays>
 
       <InfoBox variant="blue">
         The math behind one neuron and a billion neurons is the SAME. The only
@@ -647,10 +738,6 @@ function ChainTab() {
       </InfoBox>
 
       <style>{`
-        @keyframes popIn {
-          from { transform: scale(0); opacity: 0; transform-origin: center; }
-          to { transform: scale(1); opacity: 1; }
-        }
         @keyframes fadeInSlide {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
@@ -661,14 +748,29 @@ function ChainTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 4 – Your place in the story                                    */
+/*  Tab 4 – Your place in the story (with ImageNet accuracy chart)     */
 /* ------------------------------------------------------------------ */
+
+// ImageNet top-5 accuracy over the years — rough historical values.
+const IMAGENET_ACCURACY = [
+  { x: 2010, y: 72 },
+  { x: 2011, y: 74 },
+  { x: 2012, y: 84 }, // AlexNet
+  { x: 2013, y: 88 },
+  { x: 2014, y: 93 }, // GoogLeNet / VGG
+  { x: 2015, y: 96 }, // ResNet — beats human-level
+  { x: 2016, y: 97 },
+  { x: 2017, y: 97.7 },
+  { x: 2020, y: 98.8 },
+];
 
 function FutureTab() {
   const [claimed, setClaimed] = useState(false);
   const studentName = "John";
   const today = new Date().toLocaleDateString(undefined, {
-    year: "numeric", month: "long", day: "numeric",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   return (
@@ -679,13 +781,48 @@ function FutureTab() {
       >
         <Trophy className="w-10 h-10 mx-auto text-foreground" />
         <h3 className="font-hand text-2xl font-bold text-foreground">
-          You're Part of the Story Now
+          You&apos;re Part of the Story Now
         </h3>
         <p className="font-hand text-base text-foreground">
           You just learned what took scientists 80 years to figure out: how
           machines spot patterns, learn from data, and make decisions.
         </p>
       </div>
+
+      {/* ImageNet accuracy chart — the single most famous graph in ML history */}
+      <div className="card-sketchy p-4" style={{ background: PAPER }}>
+        <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground mb-1">
+          The hockey-stick graph
+        </p>
+        <h3 className="font-hand text-xl font-bold text-foreground mb-3">
+          ImageNet Top-5 Accuracy, 2010 → 2020
+        </h3>
+        <LineChart
+          series={[
+            {
+              name: "Best model each year",
+              data: IMAGENET_ACCURACY,
+              color: "var(--accent-coral)",
+            },
+          ]}
+          width={520}
+          height={260}
+          xLabel="Year"
+          yLabel="Top-5 accuracy (%)"
+          showArea
+          smooth
+        />
+        <p className="font-hand text-xs text-muted-foreground mt-2 text-center">
+          That jump in 2012? That&apos;s AlexNet. That&apos;s where deep learning
+          starts winning everything.
+        </p>
+      </div>
+
+      <RikuSays>
+        Look at that 2012 spike. One team, one CNN, two gaming GPUs, and a
+        10-point accuracy jump that made the entire research community pivot
+        overnight. Graphs like this don&apos;t come around very often.
+      </RikuSays>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {[
@@ -733,9 +870,15 @@ function FutureTab() {
         ))}
       </div>
 
+      <RikuSays>
+        You live in the &apos;large model&apos; era. The network your phone runs
+        today would&apos;ve been unimaginable in 2010. Whatever you build next
+        gets added to this same story.
+      </RikuSays>
+
       <InfoBox variant="amber">
         Every researcher you read about today started exactly where you are now —
-        curious, learning, asking 'how does this work?'. Keep going.
+        curious, learning, asking &lsquo;how does this work?&rsquo;. Keep going.
       </InfoBox>
 
       {/* ---------- Certificate ---------- */}
@@ -772,10 +915,7 @@ function FutureTab() {
             >
               Certificate of Completion
             </p>
-            <h2
-              className="font-hand text-2xl font-bold"
-              style={{ color: INK }}
-            >
+            <h2 className="font-hand text-2xl font-bold" style={{ color: INK }}>
               The Story of Machine Learning
             </h2>
             <div
@@ -796,7 +936,10 @@ function FutureTab() {
             >
               {studentName}
             </p>
-            <p className="font-hand text-sm leading-relaxed max-w-md mx-auto" style={{ color: INK }}>
+            <p
+              className="font-hand text-sm leading-relaxed max-w-md mx-auto"
+              style={{ color: INK }}
+            >
               has journeyed through 30 lessons covering neurons, gradients,
               clusters, convolutions and 80 years of ML history — and now stands
               at the doorway of building the future of AI.
@@ -806,11 +949,18 @@ function FutureTab() {
               <div className="text-center">
                 <div
                   className="font-hand text-base font-bold pb-0.5"
-                  style={{ color: INK, borderBottom: `1.5px solid ${INK}`, minWidth: 110 }}
+                  style={{
+                    color: INK,
+                    borderBottom: `1.5px solid ${INK}`,
+                    minWidth: 110,
+                  }}
                 >
                   {today}
                 </div>
-                <p className="font-hand text-[10px] uppercase tracking-wider mt-1" style={{ color: INK, opacity: 0.6 }}>
+                <p
+                  className="font-hand text-[10px] uppercase tracking-wider mt-1"
+                  style={{ color: INK, opacity: 0.6 }}
+                >
                   Date
                 </p>
               </div>
@@ -818,11 +968,18 @@ function FutureTab() {
               <div className="text-center">
                 <div
                   className="font-hand text-base font-bold italic pb-0.5"
-                  style={{ color: INK, borderBottom: `1.5px solid ${INK}`, minWidth: 110 }}
+                  style={{
+                    color: INK,
+                    borderBottom: `1.5px solid ${INK}`,
+                    minWidth: 110,
+                  }}
                 >
                   Aru &amp; Byte
                 </div>
-                <p className="font-hand text-[10px] uppercase tracking-wider mt-1" style={{ color: INK, opacity: 0.6 }}>
+                <p
+                  className="font-hand text-[10px] uppercase tracking-wider mt-1"
+                  style={{ color: INK, opacity: 0.6 }}
+                >
                   Your Guides
                 </p>
               </div>

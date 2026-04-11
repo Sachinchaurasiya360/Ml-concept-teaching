@@ -54,7 +54,32 @@ import {
   Eye,
   Sliders,
   Play,
+  Home,
+  Award,
+  MessageCircle,
+  FolderKanban,
+  Briefcase,
+  Trophy,
+  GraduationCap,
+  ScrollText,
 } from "lucide-react";
+
+interface HomeLink {
+  path: string;
+  label: string;
+  icon: React.ReactNode;
+}
+
+const HOME_LINKS: HomeLink[] = [
+  { path: "/dashboard", label: "Dashboard", icon: <Home className="w-4 h-4" /> },
+  { path: "/riku", label: "Chat with Riku", icon: <MessageCircle className="w-4 h-4" /> },
+  { path: "/projects", label: "Projects", icon: <FolderKanban className="w-4 h-4" /> },
+  { path: "/exam-prep", label: "Exam Prep", icon: <GraduationCap className="w-4 h-4" /> },
+  { path: "/career", label: "Career Paths", icon: <Briefcase className="w-4 h-4" /> },
+  { path: "/leaderboard", label: "Leaderboard", icon: <Trophy className="w-4 h-4" /> },
+  { path: "/achievements", label: "Achievements", icon: <Award className="w-4 h-4" /> },
+  { path: "/certificates", label: "Certificates", icon: <ScrollText className="w-4 h-4" /> },
+];
 
 interface LessonDef {
   path: string;
@@ -244,6 +269,40 @@ export default function Sidebar({ isOpen, onClose, collapsed, onToggleCollapse }
 
         {/* Navigation */}
         <nav className={`p-3 space-y-1 ${collapsed ? "px-2" : ""}`}>
+          {/* Home section */}
+          {!collapsed && (
+            <div className="px-2 pb-1 pt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-hand">
+              Home
+            </div>
+          )}
+          {HOME_LINKS.map((link) => {
+            const isActive = pathname === link.path || (link.path !== "/dashboard" && pathname?.startsWith(link.path + "/"));
+            return (
+              <Link
+                key={link.path}
+                href={link.path}
+                onClick={onClose}
+                title={collapsed ? link.label : undefined}
+                className={`flex items-center rounded-lg text-sm font-hand transition-all ${
+                  collapsed ? "justify-center px-0 py-2.5" : "gap-2 px-2.5 py-2"
+                } ${
+                  isActive
+                    ? "bg-accent-coral text-background border-2 border-foreground font-bold shadow-[2px_2px_0_#2b2a35]"
+                    : "text-foreground/80 hover:bg-accent-mint/30 hover:text-foreground border-2 border-transparent"
+                }`}
+              >
+                <span className="shrink-0 flex items-center justify-center">{link.icon}</span>
+                {!collapsed && <span className="flex-1 leading-tight">{link.label}</span>}
+              </Link>
+            );
+          })}
+
+          {/* Review divider + link */}
+          {!collapsed && (
+            <div className="px-2 pb-1 pt-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-hand">
+              Learn
+            </div>
+          )}
           <Link
             href="/review"
             onClick={onClose}

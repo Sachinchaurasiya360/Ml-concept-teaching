@@ -1,28 +1,32 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { ArrowLeftRight, Link2, Play, RotateCcw, Shuffle, Pause } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowLeftRight, Link2, Play, RotateCcw, Pause, Mountain } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop, playSuccess } from "../../utils/sounds";
+import {
+  NeuralNetwork,
+  BackpropagationViz,
+  LossLandscape,
+  mulberry32,
+} from "../../components/viz/neural-network";
 
 /* ------------------------------------------------------------------ */
-/*  Seeded PRNG                                                        */
+/*  Riku the red panda mascot                                          */
 /* ------------------------------------------------------------------ */
 
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function RikuSays({ children }: { children: ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
 }
 
-const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
-const sigmoidDeriv = (x: number) => { const s = sigmoid(x); return s * (1 - s); };
 const INK = "#2b2a35";
 
 /* ------------------------------------------------------------------ */
@@ -30,294 +34,109 @@ const INK = "#2b2a35";
 /* ------------------------------------------------------------------ */
 
 function ErrorFlowsTab() {
-  const [phase, setPhase] = useState<"forward" | "error" | "backprop" | "updated">("forward");
-  const [seed, setSeed] = useState(21);
   const [target, setTarget] = useState(1.0);
   const [lr, setLr] = useState(0.5);
+  const [simulatedOutput, setSimulatedOutput] = useState(0.35);
 
-  const rng = useMemo(() => mulberry32(seed), [seed]);
-  const net = useMemo(() => {
-    const r = rng;
-    return {
-      wH: [[r() * 2 - 1, r() * 2 - 1], [r() * 2 - 1, r() * 2 - 1]],
-      bH: [r() * 0.4 - 0.2, r() * 0.4 - 0.2],
-      wO: [r() * 2 - 1, r() * 2 - 1],
-      bO: r() * 0.4 - 0.2,
-    };
-  }, [rng]);
+  // "Loss" magnitude that we feed to the BackpropagationViz — larger = redder grads.
+  const loss = useMemo(() => {
+    const err = target - simulatedOutput;
+    // Scale so sliders produce lively gradient colors (0 .. ~2)
+    return Math.max(0.1, Math.abs(err) * 2.5);
+  }, [target, simulatedOutput]);
 
-  const inputs = [0.5, 0.8];
+  const architecture = [2, 3, 1];
 
-  const h0Raw = net.wH[0][0] * inputs[0] + net.wH[0][1] * inputs[1] + net.bH[0];
-  const h1Raw = net.wH[1][0] * inputs[0] + net.wH[1][1] * inputs[1] + net.bH[1];
-  const h0 = sigmoid(h0Raw);
-  const h1 = sigmoid(h1Raw);
-  const oRaw = net.wO[0] * h0 + net.wO[1] * h1 + net.bO;
-  const output = sigmoid(oRaw);
-  const error = target - output;
-
-  const dOut = error * sigmoidDeriv(oRaw);
-  const dH0 = dOut * net.wO[0] * sigmoidDeriv(h0Raw);
-  const dH1 = dOut * net.wO[1] * sigmoidDeriv(h1Raw);
-
-  const newWO = [net.wO[0] + lr * dOut * h0, net.wO[1] + lr * dOut * h1];
-  const newWH0 = [net.wH[0][0] + lr * dH0 * inputs[0], net.wH[0][1] + lr * dH0 * inputs[1]];
-  const newWH1 = [net.wH[1][0] + lr * dH1 * inputs[0], net.wH[1][1] + lr * dH1 * inputs[1]];
-
-  const handleNext = useCallback(() => {
-    playClick();
-    setPhase((p) => {
-      if (p === "forward") return "error";
-      if (p === "error") return "backprop";
-      if (p === "backprop") { playSuccess(); return "updated"; }
-      return "forward";
-    });
-  }, []);
-
-  const handleReset = useCallback(() => {
-    playClick();
-    setPhase("forward");
-    setSeed((s) => s + 1);
-  }, []);
-
-  const W = 560, H = 260;
-  const inX = 70, hX = 270, oX = 470;
-  const inYs = [100, 160];
-  const hYs = [100, 160];
-  const oY = 130;
-
-  const showForward = phase === "forward";
-  const showError = phase === "error" || phase === "backprop" || phase === "updated";
-  const showGrad = phase === "backprop" || phase === "updated";
-  const showUpdated = phase === "updated";
-
-  const phaseLabels = ["forward", "error", "backprop", "updated"] as const;
-  const phaseTitles = ["1. Forward", "2. Error", "3. Backprop", "4. Update"];
+  // Fixed, mint-positive input illustration for the "forward for comparison" panel.
+  const demoInputs = [0.5, 0.8];
 
   return (
     <div className="space-y-5">
-      {/* Phase pills */}
-      <div className="flex gap-2 justify-center flex-wrap">
-        {phaseLabels.map((p, i) => {
-          const idx = phaseLabels.indexOf(phase);
-          const active = phase === p;
-          const passed = i <= idx;
-          return (
-            <div
-              key={p}
-              className={`px-3 py-1.5 rounded-lg font-hand text-xs font-bold border-2 border-foreground transition-all ${
-                active ? "bg-accent-coral text-white shadow-[3px_3px_0_#2b2a35]" : passed ? "bg-accent-yellow" : "bg-background text-muted-foreground"
-              }`}
-            >
-              {phaseTitles[i]}
-            </div>
-          );
-        })}
-      </div>
+      <RikuSays>
+        Backprop sounds scary. It&apos;s actually: &ldquo;hey, that was wrong, everyone shift a tiny bit in the right direction&rdquo;. That&apos;s the whole vibe.
+      </RikuSays>
 
       {/* Customization */}
-      <div className="card-sketchy p-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="card-sketchy p-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="font-hand text-sm font-bold flex justify-between">
-            <span>Target output</span>
+            <span>Target</span>
             <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-mint">{target.toFixed(2)}</span>
           </label>
-          <input type="range" min={0} max={1} step={0.05} value={target} onChange={(e) => { playPop(); setTarget(parseFloat(e.target.value)); }} className="w-full" style={{ accentColor: "#4ecdc4" }} />
+          <input
+            type="range" min={0} max={1} step={0.05} value={target}
+            onChange={(e) => { playPop(); setTarget(parseFloat(e.target.value)); }}
+            className="w-full" style={{ accentColor: "#4ecdc4" }}
+          />
+        </div>
+        <div>
+          <label className="font-hand text-sm font-bold flex justify-between">
+            <span>Current output</span>
+            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-coral text-white">{simulatedOutput.toFixed(2)}</span>
+          </label>
+          <input
+            type="range" min={0} max={1} step={0.05} value={simulatedOutput}
+            onChange={(e) => { playPop(); setSimulatedOutput(parseFloat(e.target.value)); }}
+            className="w-full" style={{ accentColor: "#ff6b6b" }}
+          />
         </div>
         <div>
           <label className="font-hand text-sm font-bold flex justify-between">
             <span>Learning rate</span>
             <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-lav text-white">{lr.toFixed(2)}</span>
           </label>
-          <input type="range" min={0.1} max={2} step={0.05} value={lr} onChange={(e) => setLr(parseFloat(e.target.value))} className="w-full" style={{ accentColor: "#b18cf2" }} />
+          <input
+            type="range" min={0.05} max={1} step={0.05} value={lr}
+            onChange={(e) => setLr(parseFloat(e.target.value))}
+            className="w-full" style={{ accentColor: "#b18cf2" }}
+          />
         </div>
       </div>
 
-      {/* Network */}
+      {/* Error stats */}
+      <div className="card-sketchy p-3 max-w-md mx-auto flex flex-wrap gap-2 justify-center font-hand text-xs">
+        <span className="px-2 py-0.5 rounded border-2 border-foreground bg-background">
+          error = target − output = <b>{(target - simulatedOutput).toFixed(3)}</b>
+        </span>
+        <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-coral text-white">
+          loss ≈ <b>{loss.toFixed(2)}</b>
+        </span>
+      </div>
+
+      {/* Forward pass (for comparison) */}
       <div className="card-sketchy p-4 notebook-grid">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[600px] mx-auto">
-          <defs>
-            <radialGradient id="bp-in"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#6bb6ff" /></radialGradient>
-            <radialGradient id="bp-h"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#b18cf2" /></radialGradient>
-            <radialGradient id="bp-out-good"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#4ecdc4" /></radialGradient>
-            <radialGradient id="bp-out-bad"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#ff6b6b" /></radialGradient>
-          </defs>
-
-          {/* ---------- FORWARD connections (input → hidden) ---------- */}
-          {inYs.map((iy, ii) =>
-            hYs.map((hy, hi) => {
-              const grad = hi === 0 ? dH0 : dH1;
-              return (
-                <g key={`ih-${ii}-${hi}`}>
-                  <line
-                    x1={inX + 26} y1={iy} x2={hX - 26} y2={hy}
-                    stroke={showGrad ? (grad > 0 ? "#6bb6ff" : "#ff6b6b") : "#cbd5e1"}
-                    strokeWidth={showGrad ? 1.2 + Math.min(Math.abs(grad) * 12, 4) : 1.5}
-                    strokeOpacity={showGrad ? 0.85 : 0.6}
-                    strokeLinecap="round"
-                    className={showForward ? "signal-flow" : ""}
-                    style={showForward ? { color: "#6bb6ff", animationDuration: "1.4s" } : undefined}
-                  />
-                  {showForward && (
-                    <circle r={3.5} fill="#ffd93d" stroke={INK} strokeWidth={0.8}>
-                      <animateMotion dur="1.4s" repeatCount="indefinite" path={`M${inX + 26},${iy} L${hX - 26},${hy}`} />
-                    </circle>
-                  )}
-                </g>
-              );
-            }),
-          )}
-
-          {/* ---------- FORWARD connections (hidden → output) ---------- */}
-          {hYs.map((hy, hi) => (
-            <g key={`ho-${hi}`}>
-              <line
-                x1={hX + 26} y1={hy} x2={oX - 28} y2={oY}
-                stroke={showGrad ? (dOut > 0 ? "#4ecdc4" : "#ff6b6b") : "#cbd5e1"}
-                strokeWidth={showGrad ? 1.5 + Math.min(Math.abs(dOut) * 12, 4) : 1.5}
-                strokeLinecap="round"
-                className={showForward ? "signal-flow" : ""}
-                style={showForward ? { color: "#4ecdc4", animationDuration: "1.4s" } : undefined}
-              />
-              {showForward && (
-                <circle r={3.5} fill="#ffd93d" stroke={INK} strokeWidth={0.8}>
-                  <animateMotion dur="1.4s" repeatCount="indefinite" path={`M${hX + 26},${hy} L${oX - 28},${oY}`} />
-                </circle>
-              )}
-            </g>
-          ))}
-
-          {/* ---------- BACKWARD error pulses ---------- */}
-          {showGrad && hYs.map((hy, hi) => (
-            <circle key={`back-o-${hi}`} r={5} fill="#ff6b6b" stroke={INK} strokeWidth={1}>
-              <animateMotion dur="1.6s" repeatCount="indefinite" path={`M${oX - 28},${oY} L${hX + 26},${hy}`} />
-            </circle>
-          ))}
-          {showGrad && inYs.map((iy, ii) =>
-            hYs.map((hy, hi) => (
-              <circle key={`back-h-${ii}-${hi}`} r={4} fill="#ff6b6b" stroke={INK} strokeWidth={1}>
-                <animateMotion dur="1.8s" repeatCount="indefinite" path={`M${hX - 26},${hy} L${inX + 26},${iy}`} />
-              </circle>
-            ))
-          )}
-
-          {/* ---------- Input nodes ---------- */}
-          {inYs.map((y, i) => (
-            <g key={`in-${i}`}>
-              <circle cx={inX} cy={y} r={24} fill="url(#bp-in)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#6bb6ff" }} />
-              <text x={inX} y={y + 5} textAnchor="middle" className="text-[13px] font-bold" fill="#fff" fontFamily="Kalam">{inputs[i]}</text>
-              <text x={inX} y={y - 30} textAnchor="middle" className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">x{i + 1}</text>
-            </g>
-          ))}
-
-          {/* ---------- Hidden nodes ---------- */}
-          {hYs.map((y, i) => (
-            <g key={`h-${i}`} className={showUpdated ? "wobble" : ""}>
-              <circle cx={hX} cy={y} r={24} fill="url(#bp-h)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#b18cf2" }} />
-              <text x={hX} y={y + 5} textAnchor="middle" className="text-[12px] font-bold" fill="#fff" fontFamily="Kalam">
-                {(i === 0 ? h0 : h1).toFixed(2)}
-              </text>
-              {showGrad && (
-                <text x={hX} y={y + 42} textAnchor="middle" className="text-[10px] font-bold" fill="#ff6b6b" fontFamily="Kalam">
-                  ∇={(i === 0 ? dH0 : dH1).toFixed(3)}
-                </text>
-              )}
-            </g>
-          ))}
-
-          {/* ---------- Output node ---------- */}
-          <g>
-            {showError && (
-              <>
-                <circle cx={oX} cy={oY} r={32} fill="none" stroke="#ff6b6b" strokeWidth={2.5} className="fire-ring" />
-                <circle cx={oX} cy={oY} r={32} fill="none" stroke="#ffd93d" strokeWidth={2} className="fire-ring" style={{ animationDelay: "0.4s" }} />
-              </>
-            )}
-            <circle
-              cx={oX} cy={oY} r={28}
-              fill={showError ? "url(#bp-out-bad)" : "url(#bp-out-good)"}
-              stroke={INK} strokeWidth={2.5}
-              className="pulse-glow"
-              style={{ color: showError ? "#ff6b6b" : "#4ecdc4" }}
-            />
-            <text x={oX} y={oY + 6} textAnchor="middle" className="text-[14px] font-bold" fill="#fff" fontFamily="Kalam">
-              {output.toFixed(2)}
-            </text>
-            {showError && (
-              <text x={oX} y={oY + 48} textAnchor="middle" className="text-[12px] font-bold" fill="#ff6b6b" fontFamily="Kalam">
-                err={error.toFixed(3)}
-              </text>
-            )}
-          </g>
-
-          {/* Target marker */}
-          <g>
-            <text x={oX + 50} y={oY - 8} className="text-[11px] font-bold" fill={INK} fontFamily="Kalam">target</text>
-            <rect x={oX + 42} y={oY - 4} width={36} height={20} rx={4} fill="#4ecdc4" stroke={INK} strokeWidth={2} />
-            <text x={oX + 60} y={oY + 11} textAnchor="middle" className="text-[12px] font-bold" fill="#fff" fontFamily="Kalam">{target.toFixed(2)}</text>
-          </g>
-
-          {/* Layer labels */}
-          <text x={inX} y={32} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">INPUT</text>
-          <text x={hX} y={32} textAnchor="middle" className="text-[12px] font-bold" fill="#b18cf2" fontFamily="Kalam">HIDDEN</text>
-          <text x={oX} y={32} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">OUTPUT</text>
-
-          {/* Convergence sparks on update phase */}
-          {showUpdated && Array.from({ length: 8 }).map((_, k) => {
-            const a = (k / 8) * Math.PI * 2;
-            return (
-              <line key={`sp-${k}`}
-                x1={oX} y1={oY}
-                x2={oX + Math.cos(a) * 52} y2={oY + Math.sin(a) * 52}
-                stroke="#ffd93d" strokeWidth={2.5} strokeLinecap="round"
-                className="spark" style={{ animationDelay: `${k * 0.05}s` }}
-              />
-            );
-          })}
-
-          {/* Backflow caption */}
-          {showGrad && (
-            <text x={W / 2} y={H - 12} textAnchor="middle" className="text-[12px] font-bold" fill="#ff6b6b" fontFamily="Kalam">
-              ◀ ◀ ◀ error flows backward ◀ ◀ ◀
-            </text>
-          )}
-        </svg>
+        <div className="font-hand text-sm font-bold text-center mb-2">
+          <span className="marker-highlight-mint">Forward pass</span> — data flows left to right
+        </div>
+        <NeuralNetwork
+          layers={architecture}
+          inputs={demoInputs}
+          animateFlow
+          showValues
+          height={260}
+        />
       </div>
 
-      {/* Weight updates */}
-      {showUpdated && (
-        <div className="card-sketchy p-4 animate-fadeIn" style={{ background: "#e0f7f5" }}>
-          <div className="font-hand text-base font-bold mb-2">
-            <span className="marker-highlight-mint">Weights updated!</span>
-          </div>
-          <div className="font-hand text-xs space-y-1">
-            <div className="bg-background px-3 py-1.5 rounded border-2 border-foreground/30">
-              <b>wO</b>: [{net.wO[0].toFixed(3)}, {net.wO[1].toFixed(3)}] → <span className="font-bold" style={{ color: "#4ecdc4" }}>[{newWO[0].toFixed(3)}, {newWO[1].toFixed(3)}]</span>
-            </div>
-            <div className="bg-background px-3 py-1.5 rounded border-2 border-foreground/30">
-              <b>wH₁</b>: [{net.wH[0][0].toFixed(3)}, {net.wH[0][1].toFixed(3)}] → <span className="font-bold" style={{ color: "#b18cf2" }}>[{newWH0[0].toFixed(3)}, {newWH0[1].toFixed(3)}]</span>
-            </div>
-            <div className="bg-background px-3 py-1.5 rounded border-2 border-foreground/30">
-              <b>wH₂</b>: [{net.wH[1][0].toFixed(3)}, {net.wH[1][1].toFixed(3)}] → <span className="font-bold" style={{ color: "#b18cf2" }}>[{newWH1[0].toFixed(3)}, {newWH1[1].toFixed(3)}]</span>
-            </div>
-          </div>
-        </div>
-      )}
+      <RikuSays>
+        Now watch it in reverse. Redder neurons = bigger gradient = bigger blame. Every edge gets a Δw label: a tiny nudge in the opposite direction of the gradient.
+      </RikuSays>
 
-      <div className="flex gap-3 justify-center">
-        <button onClick={handleNext} className="btn-sketchy text-sm">
-          <Play className="w-4 h-4" />
-          {phase === "forward" ? "Show Error" : phase === "error" ? "Backpropagate" : phase === "backprop" ? "Update Weights" : "Start Over"}
-        </button>
-        <button onClick={handleReset} className="btn-sketchy-outline text-sm">
-          <Shuffle className="w-4 h-4" />
-          New Weights
-        </button>
+      {/* Backward pass visualization */}
+      <div className="card-sketchy p-4 notebook-grid">
+        <div className="font-hand text-sm font-bold text-center mb-2">
+          <span className="marker-highlight-coral">Backward pass</span> — error flows right to left
+        </div>
+        <BackpropagationViz
+          architecture={architecture}
+          loss={loss}
+          learningRate={lr}
+          showUpdateArrows
+        />
       </div>
 
       <InfoBox variant="blue">
         <span className="font-hand text-base">
-          🔄 Backprop in 4 steps: forward → measure error → flow gradients backward → nudge each weight. Watch the red error pulses race backward through the network in step 3!
+          Backprop in 4 steps: forward pass → measure error → flow gradients backward → nudge each weight by −lr · gradient. Slide &ldquo;Current output&rdquo; away from &ldquo;Target&rdquo; and watch the gradients get angrier.
         </span>
       </InfoBox>
     </div>
@@ -325,131 +144,101 @@ function ErrorFlowsTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2  Chain Rule Visualized                                      */
+/*  Tab 2  Chain Rule Visualized (via Loss Landscape)                  */
 /* ------------------------------------------------------------------ */
 
 function ChainRuleTab() {
-  const [inputVal, setInputVal] = useState(1.0);
-  const [w1, setW1] = useState(0.8);
-  const [w2, setW2] = useState(1.2);
-  const b1 = 0.2, b2 = -0.3;
+  // Two preset loss surfaces we can switch between.
+  const [preset, setPreset] = useState<"bowl" | "valley" | "saddle">("bowl");
+  const [lr, setLr] = useState(0.15);
 
-  const hRaw = w1 * inputVal + b1;
-  const hVal = sigmoid(hRaw);
-  const oRaw = w2 * hVal + b2;
-  const oVal = sigmoid(oRaw);
+  const lossFn = useMemo(() => {
+    if (preset === "valley") {
+      // Stretched "valley": gradient descent has to snake its way down.
+      return (x: number, y: number) => 0.2 * x * x + 2 * y * y;
+    }
+    if (preset === "saddle") {
+      // Saddle shape: descent has to escape the middle.
+      return (x: number, y: number) => x * x - y * y + 3;
+    }
+    // Default round bowl centered at (1, -0.5).
+    return (x: number, y: number) => (x - 1) * (x - 1) + (y + 0.5) * (y + 0.5);
+  }, [preset]);
 
-  const dOdH = sigmoidDeriv(oRaw) * w2;
-  const dHdI = sigmoidDeriv(hRaw) * w1;
-  const dOdI = dOdH * dHdI;
-
-  const W = 540, H = 220;
+  const startPoint: [number, number] =
+    preset === "saddle" ? [0.1, 2.5] : [-2.5, 2];
 
   return (
     <div className="space-y-5">
-      {/* Input + weight sliders */}
-      <div className="card-sketchy p-4 grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ background: "#fff8e7" }}>
-        <div>
-          <label className="font-hand text-sm font-bold flex justify-between">
-            <span>Input</span>
-            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-sky text-white">{inputVal.toFixed(2)}</span>
-          </label>
-          <input type="range" min={-3} max={3} step={0.1} value={inputVal} onChange={(e) => { playPop(); setInputVal(parseFloat(e.target.value)); }} className="w-full" style={{ accentColor: "#6bb6ff" }} />
+      <RikuSays>
+        The loss surface is like a hilly landscape and the network is a marble rolling downhill. We just help it roll smarter  one tiny step in the direction that points most downhill.
+      </RikuSays>
+
+      {/* Preset + lr controls */}
+      <div className="card-sketchy p-3 grid grid-cols-1 sm:grid-cols-2 gap-3" style={{ background: "#fff8e7" }}>
+        <div className="space-y-1.5">
+          <div className="font-hand text-sm font-bold">Loss surface</div>
+          <div className="flex gap-2 flex-wrap">
+            {(["bowl", "valley", "saddle"] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => { playClick(); setPreset(p); }}
+                className={`px-3 py-1 rounded-lg border-2 border-foreground font-hand text-xs font-bold transition-all ${
+                  preset === p
+                    ? "bg-accent-coral text-white shadow-[2px_2px_0_#2b2a35]"
+                    : "bg-background"
+                }`}
+              >
+                {p === "bowl" ? "Round bowl" : p === "valley" ? "Stretched valley" : "Saddle"}
+              </button>
+            ))}
+          </div>
         </div>
         <div>
           <label className="font-hand text-sm font-bold flex justify-between">
-            <span>w1</span>
-            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-lav text-white">{w1.toFixed(2)}</span>
+            <span>Learning rate</span>
+            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-lav text-white">{lr.toFixed(2)}</span>
           </label>
-          <input type="range" min={-2} max={2} step={0.05} value={w1} onChange={(e) => setW1(parseFloat(e.target.value))} className="w-full" style={{ accentColor: "#b18cf2" }} />
-        </div>
-        <div>
-          <label className="font-hand text-sm font-bold flex justify-between">
-            <span>w2</span>
-            <span className="px-2 py-0.5 rounded border-2 border-foreground bg-accent-mint">{w2.toFixed(2)}</span>
-          </label>
-          <input type="range" min={-2} max={2} step={0.05} value={w2} onChange={(e) => setW2(parseFloat(e.target.value))} className="w-full" style={{ accentColor: "#4ecdc4" }} />
+          <input
+            type="range" min={0.02} max={0.5} step={0.01} value={lr}
+            onChange={(e) => setLr(parseFloat(e.target.value))}
+            className="w-full" style={{ accentColor: "#b18cf2" }}
+          />
         </div>
       </div>
 
-      {/* Diagram */}
-      <div className="card-sketchy p-4 notebook-grid">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[560px] mx-auto">
-          <defs>
-            <radialGradient id="cr-in"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#6bb6ff" /></radialGradient>
-            <radialGradient id="cr-h"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#b18cf2" /></radialGradient>
-            <radialGradient id="cr-o"><stop offset="0%" stopColor="#fff" /><stop offset="100%" stopColor="#4ecdc4" /></radialGradient>
-          </defs>
-
-          {/* Forward arrows */}
-          <line x1={88} y1={100} x2={232} y2={100} stroke="#6bb6ff" strokeWidth={3} strokeLinecap="round" className="signal-flow" style={{ color: "#6bb6ff" }} />
-          <circle r={4} fill="#ffd93d" stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.4s" repeatCount="indefinite" path="M88,100 L232,100" />
-          </circle>
-          <text x={160} y={88} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">w1={w1.toFixed(1)}</text>
-
-          <line x1={272} y1={100} x2={416} y2={100} stroke="#4ecdc4" strokeWidth={3} strokeLinecap="round" className="signal-flow" style={{ color: "#4ecdc4" }} />
-          <circle r={4} fill="#ffd93d" stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.4s" repeatCount="indefinite" path="M272,100 L416,100" />
-          </circle>
-          <text x={344} y={88} textAnchor="middle" className="text-[12px] font-bold" fill={INK} fontFamily="Kalam">w2={w2.toFixed(1)}</text>
-
-          {/* Backward gradient arrows */}
-          <line x1={416} y1={140} x2={272} y2={140} stroke="#ff6b6b" strokeWidth={2.5} strokeLinecap="round" strokeDasharray="6 4" />
-          <circle r={4} fill="#ff6b6b" stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.6s" repeatCount="indefinite" path="M416,140 L272,140" />
-          </circle>
-          <text x={344} y={158} textAnchor="middle" className="text-[11px] font-bold" fill="#ff6b6b" fontFamily="Kalam">
-            ∂O/∂H = {dOdH.toFixed(3)}
-          </text>
-
-          <line x1={232} y1={140} x2={88} y2={140} stroke="#ff6b6b" strokeWidth={2.5} strokeLinecap="round" strokeDasharray="6 4" />
-          <circle r={4} fill="#ff6b6b" stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.8s" repeatCount="indefinite" path="M232,140 L88,140" />
-          </circle>
-          <text x={160} y={158} textAnchor="middle" className="text-[11px] font-bold" fill="#ff6b6b" fontFamily="Kalam">
-            ∂H/∂I = {dHdI.toFixed(3)}
-          </text>
-
-          {/* Nodes */}
-          <circle cx={60} cy={100} r={28} fill="url(#cr-in)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#6bb6ff" }} />
-          <text x={60} y={94} textAnchor="middle" className="text-[10px] font-bold" fill="#fff" fontFamily="Kalam">input</text>
-          <text x={60} y={108} textAnchor="middle" className="text-[14px] font-bold" fill="#fff" fontFamily="Kalam">{inputVal.toFixed(2)}</text>
-
-          <circle cx={252} cy={100} r={28} fill="url(#cr-h)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#b18cf2" }} />
-          <text x={252} y={94} textAnchor="middle" className="text-[10px] font-bold" fill="#fff" fontFamily="Kalam">hidden</text>
-          <text x={252} y={108} textAnchor="middle" className="text-[13px] font-bold" fill="#fff" fontFamily="Kalam">{hVal.toFixed(3)}</text>
-
-          <circle cx={444} cy={100} r={28} fill="url(#cr-o)" stroke={INK} strokeWidth={2.5} className="pulse-glow" style={{ color: "#4ecdc4" }} />
-          <text x={444} y={94} textAnchor="middle" className="text-[10px] font-bold" fill="#fff" fontFamily="Kalam">output</text>
-          <text x={444} y={108} textAnchor="middle" className="text-[13px] font-bold" fill="#fff" fontFamily="Kalam">{oVal.toFixed(3)}</text>
-
-          {/* Chain rule equation */}
-          <text x={W / 2} y={200} textAnchor="middle" className="text-[13px] font-bold" fill={INK} fontFamily="Kalam">
-            ∂O/∂I = {dOdH.toFixed(3)} × {dHdI.toFixed(3)} = <tspan fill="#ff6b6b">{dOdI.toFixed(4)}</tspan>
-          </text>
-        </svg>
+      {/* The loss landscape itself */}
+      <div className="card-sketchy p-4 notebook-grid flex justify-center">
+        <LossLandscape
+          lossFn={lossFn}
+          learningRate={lr}
+          startPoint={startPoint}
+          range={[-3.5, 3.5]}
+        />
       </div>
+
+      <RikuSays>
+        The chain rule is how we compute that downhill direction deep in a network. Gradient at layer 3 times weight times gradient at layer 2 times weight… a big telephone game of multiplications all the way back to the inputs.
+      </RikuSays>
 
       <div className="card-sketchy p-4 space-y-2" style={{ background: "#fff0f0" }}>
         <div className="font-hand text-base font-bold">
           <span className="marker-highlight-coral">The Chain Rule in Action</span>
         </div>
         <div className="font-hand text-sm">
-          To know how changing the <span className="font-bold" style={{ color: "#6bb6ff" }}>input</span> affects the <span className="font-bold" style={{ color: "#4ecdc4" }}>output</span>, multiply gradients along the chain:
+          To know how changing a weight affects the final output, multiply gradients along the chain:
         </div>
         <div className="font-hand text-base text-center bg-background px-3 py-2 rounded border-2 border-foreground/30">
-          <span style={{ color: "#ff6b6b" }} className="font-bold">∂Output/∂Input</span> = <span style={{ color: "#ff6b6b" }} className="font-bold">∂Output/∂Hidden</span> × <span style={{ color: "#ff6b6b" }} className="font-bold">∂Hidden/∂Input</span>
+          <span style={{ color: "#ff6b6b" }} className="font-bold">∂Loss/∂w</span> = <span style={{ color: "#ff6b6b" }} className="font-bold">∂Loss/∂output</span> × <span style={{ color: "#ff6b6b" }} className="font-bold">∂output/∂hidden</span> × <span style={{ color: "#ff6b6b" }} className="font-bold">∂hidden/∂w</span>
         </div>
         <div className="font-hand text-sm">
-          If we nudge the input by a tiny bit, the output changes by{" "}
-          <span className="font-bold marker-highlight-yellow">{dOdI.toFixed(4)}</span>.
+          On the landscape above, this product is exactly the direction the red descent path is trying to follow.
         </div>
       </div>
 
       <InfoBox variant="amber" title="The Chain Rule">
         <span className="font-hand text-base">
-          🔗 The chain rule lets us compute how each weight affects the final output by multiplying gradients along the path. This is the math behind backprop! Try sliding w1 and w2  when both flip sign, the gradient flips too.
+          The chain rule lets us compute how each weight affects the final loss by multiplying gradients along the path. This is the math behind backprop! Try flipping between the three surfaces  watch how the descent path changes character.
         </span>
       </InfoBox>
     </div>
@@ -570,6 +359,10 @@ function WatchItLearnTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Press Play. The purple line is our guess, the dashed mint line is the truth. Each epoch: forward, measure, backprop, nudge. A thousand tiny nudges later  boom, it matches.
+      </RikuSays>
+
       <div className="text-center font-hand text-2xl font-bold">
         Learning <span className="marker-highlight-yellow">y = {slope}x + {intercept}</span>
       </div>
@@ -723,7 +516,7 @@ function WatchItLearnTab() {
 
       <InfoBox variant="green" title="Training Loop">
         <span className="font-hand text-base">
-          🎢 Each epoch: forward pass (predict) → backprop (compute gradients) → update (adjust weights). Watch the purple line crawl toward the dashed mint target line as the loss curve plummets! Try cranking the learning rate up to see it overshoot.
+          Each epoch: forward pass (predict) → backprop (compute gradients) → update (adjust weights). Watch the purple line crawl toward the dashed mint target line as the loss curve plummets! Try cranking the learning rate up to see it overshoot.
         </span>
       </InfoBox>
     </div>
@@ -800,14 +593,14 @@ export default function L21_BackpropagationActivity() {
       },
       {
         id: "chain-rule",
-        label: "Chain Rule Visualized",
-        icon: <Link2 className="w-4 h-4" />,
+        label: "Loss Landscape",
+        icon: <Mountain className="w-4 h-4" />,
         content: <ChainRuleTab />,
       },
       {
         id: "watch-learn",
         label: "Watch It Learn",
-        icon: <Play className="w-4 h-4" />,
+        icon: <Link2 className="w-4 h-4" />,
         content: <WatchItLearnTab />,
       },
     ],

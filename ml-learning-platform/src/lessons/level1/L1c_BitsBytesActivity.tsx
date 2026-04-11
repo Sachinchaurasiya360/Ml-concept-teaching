@@ -7,6 +7,15 @@ import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop } from "../../utils/sounds";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
 const MINT = "#4ecdc4";
@@ -38,6 +47,11 @@ function BitBuilderTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        A bit is a single yes/no. A byte is 8 of them stacked together. That&apos;s enough to count
+        to 255 or spell a letter. Flip the switches below and watch the letter change in real time!
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
         A <span style={{ color: CORAL, fontWeight: 700 }}>bit</span> is the smallest piece of memory — just 0 or 1.
         Stack <span style={{ color: LAVENDER, fontWeight: 700 }}>8 bits</span> together and you get a{" "}
@@ -105,8 +119,14 @@ function BitBuilderTab() {
       </div>
 
       <InfoBox variant="blue">
-        Every letter you type, every emoji 😀, every pixel on this screen — it's all just bits flipping between 0 and 1. The whole digital world rests on that one tiny choice.
+        Every letter you type, every emoji 😀, every pixel on this screen — it&apos;s all just bits flipping between 0 and 1. The whole digital world rests on that one tiny choice.
       </InfoBox>
+
+      <RikuSays>
+        Fun fact: the place values double each step — 128, 64, 32, 16, 8, 4, 2, 1. That&apos;s
+        binary&apos;s whole trick. Mix and match those eight numbers and you can build anything from
+        0 to 255.
+      </RikuSays>
     </div>
   );
 }
@@ -139,6 +159,12 @@ function FileSizeTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        File sizes grow FAST. A photo is millions of times bigger than a single letter. I had to
+        use a log scale here — each bar step is about 10x the one before it, otherwise the letter
+        would be a pixel and the movie would be a mile wide.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
         Files come in wildly different sizes. This bar chart uses a{" "}
         <span style={{ color: CORAL, fontWeight: 700 }}>log scale</span> — each step is <b>10× bigger</b> than the last!
@@ -199,6 +225,11 @@ function FileSizeTab() {
       <InfoBox variant="amber">
         Going from a single letter to GPT-4 is a jump of <b>1,000,000,000,000×</b>. The internet works because we built ways to store and move trillions of these bytes every second.
       </InfoBox>
+
+      <RikuSays>
+        Hover over each bar — I love the jump from &quot;text message&quot; to &quot;MP3 song&quot;.
+        Audio has to describe the air itself, thousands of times a second. No wonder it eats bytes.
+      </RikuSays>
     </div>
   );
 }
@@ -220,6 +251,12 @@ function StorageRaceTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Your phone&apos;s storage is never the number on the box. The operating system and apps
+        always grab a chunk first. Slide things around and see how the real free space shrinks
+        and swells.
+      </RikuSays>
+
       <p className="font-hand text-base text-center" style={{ color: INK }}>
         How many photos can your phone <b>actually</b> hold? Drag the sliders to see!
       </p>
@@ -308,8 +345,14 @@ function StorageRaceTab() {
       </div>
 
       <InfoBox variant="green">
-        Notice how a tiny change in <b>photo size</b> changes the total dramatically. That's why "compress your photos" actually matters — every byte adds up.
+        Notice how a tiny change in <b>photo size</b> changes the total dramatically. That&apos;s why &quot;compress your photos&quot; actually matters — every byte adds up.
       </InfoBox>
+
+      <RikuSays>
+        This is also why machine learning engineers obsess over file sizes. Training a model on a
+        million photos? Halve the photo size and you&apos;ve saved hundreds of gigabytes. Bytes
+        really do add up.
+      </RikuSays>
     </div>
   );
 }

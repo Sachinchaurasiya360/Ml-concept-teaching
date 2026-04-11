@@ -17,6 +17,15 @@ const THEMES = [
 ];
 const INK = "#2b2a35";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 interface Landmark { x: number; y: number; z: number }
 interface HandResult {
   landmarks: Landmark[][];
@@ -194,6 +203,10 @@ function LiveHandTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Right now, your webcam is about to stream 30 pictures per second to a neural network that finds your hand in every single frame. Five years ago this was a research paper. Today it runs in your browser with zero installs. That&apos;s how normal this has become.
+      </RikuSays>
+
       {/* Theme + status */}
       <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-3">
         <div className="flex items-center gap-2">
@@ -308,6 +321,10 @@ function LiveHandTab() {
           🖐️ MediaPipe finds <b>21 landmark points</b> on each hand: 4 per finger + 1 for the wrist. The colored lines connect them into a skeleton — that's how a computer "sees" the shape of your hand.
         </span>
       </InfoBox>
+
+      <RikuSays>
+        Notice how the skeleton sometimes flickers when the lighting goes weird or your hand is half off-screen? That&apos;s not a bug — that&apos;s the model&apos;s confidence dropping. Real AI is always a little noisy. Even self-driving cars deal with this.
+      </RikuSays>
     </div>
   );
 }
@@ -352,6 +369,10 @@ function LandmarkAnatomyTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Hand tracking finds 21 &quot;landmarks&quot; on your hand — fingertip, knuckle, wrist, the whole skeleton. Hover any dot below to see exactly what joint it represents. Very minimalist, very powerful.
+      </RikuSays>
+
       <div className="card-sketchy p-3 flex items-center justify-center gap-2">
         <Palette className="w-4 h-4 text-foreground/60" />
         <span className="font-hand text-sm font-bold">Color:</span>
@@ -431,6 +452,10 @@ function LandmarkAnatomyTab() {
           🧠 Each landmark is just an (x, y, z) coordinate in space. From these 21 numbers per hand, the computer can tell whether you're pointing, waving, or making a fist — all using simple geometry!
         </span>
       </InfoBox>
+
+      <RikuSays>
+        Fun fact: once you have these 21 points, counting extended fingers is just comparing y-coordinates — is the fingertip above the knuckle? Yes? Finger is up. No fancy AI needed for that step. The AI did the hard part first.
+      </RikuSays>
     </div>
   );
 }

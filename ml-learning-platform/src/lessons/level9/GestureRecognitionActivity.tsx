@@ -11,6 +11,15 @@ import { playClick, playSuccess, playPop } from "../../utils/sounds";
 
 const INK = "#2b2a35";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 // MediaPipe gesture names → emoji + label
 const GESTURE_INFO: Record<string, { emoji: string; label: string; color: string }> = {
   Thumb_Up: { emoji: "👍", label: "Thumbs Up", color: "#4ecdc4" },
@@ -165,6 +174,10 @@ function LiveGestureTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        A gesture is just a shape your hand makes. Thumbs up, peace sign, fist. The model doesn&apos;t actually &quot;see&quot; the meaning — it sees the pattern of 21 landmark positions and matches it to a label it learned during training. Try all seven below.
+      </RikuSays>
+
       <div className="card-sketchy p-4 space-y-4">
         <div className="relative mx-auto w-full max-w-[640px] aspect-[4/3] rounded-xl overflow-hidden border-2 border-foreground bg-[#1a1a22]">
           <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover scale-x-[-1]" playsInline muted />
@@ -268,6 +281,10 @@ function LiveGestureTab() {
           ✨ Behind the scenes: MediaPipe first finds the <b>21 hand landmarks</b>, then a small classifier looks at their geometric arrangement and predicts which of 7 known gestures you're making.
         </span>
       </InfoBox>
+
+      <RikuSays>
+        Watch the confidence bar wobble when you move fast or half-make a gesture. That wobble is the model saying &quot;I&apos;m not 100% sure.&quot; In real apps you set a threshold — for example, only act when confidence is above 70%. Otherwise you get false thumbs-ups everywhere.
+      </RikuSays>
     </div>
   );
 }
@@ -406,6 +423,10 @@ function SimonSaysTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Simon Says is how you&apos;d actually test a gesture-control app. The computer picks a target, you make the shape, the model scores it. If the score crosses the threshold, point scored. This is basically how hands-free menus on smart TVs work.
+      </RikuSays>
+
       <div className="card-sketchy p-4 space-y-4">
         {/* Target prompt */}
         {isLive && (
@@ -493,6 +514,10 @@ function SimonSaysTab() {
           🎮 This is the foundation of <b>gesture-controlled UIs</b>: TVs that change channels with a wave, cars that adjust volume with a twist, and accessibility tools for people who can't use a mouse or touchscreen.
         </span>
       </InfoBox>
+
+      <RikuSays>
+        You just built a mini game on top of a neural network. The game logic is like 10 lines of code. The AI part is already done for you. This is what people mean when they say &quot;ML is becoming a utility&quot; — you don&apos;t train it, you just use it.
+      </RikuSays>
     </div>
   );
 }

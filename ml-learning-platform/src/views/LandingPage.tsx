@@ -27,7 +27,7 @@ const LEVEL_CARDS = [
     desc: "Start from the very basics \u2014 what machines do, how computers think in 0s and 1s, and what data really means.",
     icon: <Cpu className="w-6 h-6" />,
     accent: "var(--accent-sky)",
-    lessons: 3,
+    lessons: 5,
     path: "/level1/machines",
   },
   {
@@ -36,7 +36,7 @@ const LEVEL_CARDS = [
     desc: "Learn to plot data on graphs, spot trends and clusters, and sort information like a computer.",
     icon: <Axis3D className="w-6 h-6" />,
     accent: "var(--accent-mint)",
-    lessons: 3,
+    lessons: 5,
     path: "/level2/coordinates",
   },
   {
@@ -45,7 +45,7 @@ const LEVEL_CARDS = [
     desc: "Make predictions from data, draw the best-fit line, and understand what algorithms are.",
     icon: <Sparkles className="w-6 h-6" />,
     accent: "var(--accent-lav)",
-    lessons: 4,
+    lessons: 6,
     path: "/level3/predictions",
   },
   {
@@ -54,7 +54,7 @@ const LEVEL_CARDS = [
     desc: "Dive into supervised learning, K-Nearest Neighbors, decision trees, and how to measure model success.",
     icon: <Target className="w-6 h-6" />,
     accent: "var(--accent-yellow)",
-    lessons: 4,
+    lessons: 6,
     path: "/level4/supervised-learning",
   },
   {
@@ -63,7 +63,7 @@ const LEVEL_CARDS = [
     desc: "Discover how machines find hidden groups in data without labels using K-Means clustering.",
     icon: <Layers className="w-6 h-6" />,
     accent: "var(--accent-coral)",
-    lessons: 3,
+    lessons: 5,
     path: "/level5/unsupervised-learning",
   },
   {
@@ -72,7 +72,7 @@ const LEVEL_CARDS = [
     desc: "Build neurons, stack them into layers, and learn how backpropagation teaches a network.",
     icon: <Zap className="w-6 h-6" />,
     accent: "var(--accent-sky)",
-    lessons: 4,
+    lessons: 6,
     path: "/level6/perceptron",
   },
   {
@@ -90,7 +90,7 @@ const LEVEL_CARDS = [
     desc: "See how computers see \u2014 pixels, filters, convolution, pooling, and build a mini CNN from scratch.",
     icon: <ImageIcon className="w-6 h-6" />,
     accent: "var(--accent-lav)",
-    lessons: 4,
+    lessons: 5,
     path: "/level8/images-as-data",
   },
 ];
@@ -98,26 +98,26 @@ const LEVEL_CARDS = [
 const FEATURES = [
   {
     icon: <Play className="w-5 h-5" />,
-    title: "Fully Interactive",
-    desc: "Every lesson has hands-on SVG activities \u2014 click, drag, and explore concepts visually.",
+    title: "Interactive, Not Boring",
+    desc: "Every lesson has hands-on SVG activities \u2014 click, drag, and explore. No passive video lectures.",
     accent: "var(--accent-coral)",
   },
   {
     icon: <BookOpen className="w-5 h-5" />,
     title: "Story-Driven",
-    desc: "Follow Aru & her robot friend Byte as they discover ML concepts through real-world adventures.",
+    desc: "Follow Aru and Riku the red panda as they discover AI through cricket, Netflix, and daily adventures.",
     accent: "var(--accent-yellow)",
   },
   {
     icon: <Users className="w-5 h-5" />,
-    title: "Beginner Friendly",
-    desc: "Starts from \"What is a machine?\" \u2014 no coding or math prerequisites needed.",
+    title: "Made for Class 8\u201312",
+    desc: "Age-appropriate content across CBSE, ICSE, and State Boards. No coding or math prerequisites.",
     accent: "var(--accent-mint)",
   },
   {
     icon: <Star className="w-5 h-5" />,
-    title: "Quiz Challenges",
-    desc: "Test your understanding with quizzes at the end of every lesson.",
+    title: "Gamified Learning",
+    desc: "XP, streaks, badges, and leaderboards. Learning AI should feel like playing your favorite game.",
     accent: "var(--accent-lav)",
   },
 ];
@@ -145,20 +145,20 @@ export default function LandingPage() {
             style={{ background: "var(--accent-yellow)", boxShadow: "2px 2px 0 #2b2a35" }}
           >
             <Brain className="w-3.5 h-3.5" />
-            29 Interactive Lessons &middot; 8 Levels
+            CBSE &middot; ICSE &middot; State Boards &middot; Class 8&ndash;12
           </div>
 
           {/* Title */}
           <div className="mb-4 text-6xl">&#x1F43C;</div>
           <h1 className="font-hand text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-            Learn Machine Learning
+            Learn AI.
             <br />
-            <span className="marker-highlight-yellow">From Scratch</span>
+            <span className="marker-highlight-yellow">Made Fun.</span>
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-[#6b6776] max-w-2xl mx-auto leading-relaxed">
-            A hands-on interactive journey from &ldquo;What is a machine?&rdquo; all the way to
-            building neural networks and CNNs. No prior knowledge needed &mdash; just curiosity.
+            The AI learning platform for Class 8&ndash;12 students in India. Stories, memes, games, and real-world
+            adventures &mdash; no boring lectures, no heavy coding. Just curiosity.
           </p>
 
           {/* CTA buttons */}
@@ -244,10 +244,10 @@ export default function LandingPage() {
       <section id="levels" className="max-w-5xl mx-auto px-4 pb-24">
         <div className="text-center mb-12">
           <h2 className="font-hand text-4xl sm:text-5xl font-bold text-[#2b2a35]">
-            Your Learning <span className="marker-highlight-mint">Path</span>
+            Your Learning <span className="marker-highlight-mint">Track</span>
           </h2>
           <p className="text-[#6b6776] mt-3 text-lg">
-            8 levels &middot; 29 lessons &middot; From absolute beginner to building CNNs
+            9 levels &middot; 36 lessons &middot; From &ldquo;What is a machine?&rdquo; to building CNNs
           </p>
         </div>
 
@@ -304,23 +304,23 @@ export default function LandingPage() {
               <div>
                 <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Aru</h3>
                 <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
-                  A curious 12-year-old who loves asking &ldquo;why?&rdquo; &mdash; she discovers ML concepts through
-                  everyday adventures like packing for trips, finding lost dogs, and predicting rain.
+                  A curious student just like you. Aru asks the questions you&apos;d ask &mdash; and discovers
+                  AI through cricket, Netflix, Instagram, and daily adventures.
                 </p>
               </div>
             </div>
             <div className="flex gap-3 items-start">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2b2a35]"
-                style={{ background: "var(--accent-sky)" }}
+                style={{ background: "var(--accent-peach)" }}
               >
-                <span className="text-2xl">&#x1F916;</span>
+                <span className="text-2xl">&#x1F43C;</span>
               </div>
               <div>
-                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Byte</h3>
+                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Riku</h3>
                 <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
-                  Aru&apos;s friendly robot companion who explains how computers think, learn, and see the world &mdash;
-                  one step at a time.
+                  Your AI companion &mdash; a witty red panda who narrates lessons, drops memes, roasts wrong
+                  answers (kindly), and celebrates every win with you.
                 </p>
               </div>
             </div>
@@ -333,7 +333,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <h2 className="font-hand text-4xl font-bold text-[#2b2a35]">Ready to begin?</h2>
           <p className="text-[#6b6776] text-lg mt-3">
-            Start from the very first lesson and work your way up. It&apos;s free and fun!
+            Start from Level 1 and work your way up. It&apos;s free and fun!
           </p>
           <button
             onClick={() => {
@@ -353,10 +353,10 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-[#fdfbf6]">
             <Brain className="w-5 h-5" style={{ color: "var(--accent-yellow)" }} />
-            <span className="font-hand text-xl font-bold">ML Learning Path</span>
+            <span className="font-hand text-xl font-bold">Red Panda Learn</span>
           </div>
           <p className="text-[#fdfbf6]/60 text-xs font-hand">
-            From Machines to Machine Learning &middot; 29 Interactive Lessons
+            AI Education for Class 8&ndash;12 &middot; CBSE &middot; ICSE &middot; State Boards
           </p>
         </div>
       </footer>

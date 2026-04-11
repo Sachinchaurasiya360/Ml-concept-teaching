@@ -11,6 +11,15 @@ import { playClick } from "../../utils/sounds";
 
 const INK = "#2b2a35";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 const PALETTE = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#b18cf2", "#6bb6ff", "#ffb88c", "#7ee0d8", "#ff8a8a"];
 
 interface Detection {
@@ -183,6 +192,10 @@ function LiveDetectionTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Object detection puts boxes around things in a picture. &quot;Cat, top-left. Laptop, center. Coffee cup, right side.&quot; Each box has a label AND a confidence score. Move the slider below to change how picky the model is before it commits.
+      </RikuSays>
+
       {/* Threshold slider */}
       <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-3">
         <span className="font-hand text-sm font-bold">Confidence threshold:</span>
@@ -301,6 +314,10 @@ function LiveDetectionTab() {
           📦 Object detection draws a <b>bounding box</b> around each thing it sees and labels it. The model is <b>EfficientDet-Lite0</b> — small enough to run on a phone, trained on the COCO dataset (80 everyday objects).
         </span>
       </InfoBox>
+
+      <RikuSays>
+        The bar chart below keeps a running tally of what your camera has seen. Point at different stuff — a book, a mug, yourself — and watch the counts climb. This exact idea powers inventory cameras in warehouses and shelf-checking robots in supermarkets.
+      </RikuSays>
     </div>
   );
 }
@@ -352,6 +369,10 @@ function HowItWorksTab() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Here&apos;s the six-step recipe a detector uses on every single frame. Click through the steps — each one is actually a separate little algorithm stitched together. The whole thing runs in about 30 milliseconds on a laptop.
+      </RikuSays>
+
       <div className="card-sketchy p-4 notebook-grid space-y-4">
         <div className="flex justify-center gap-1.5 flex-wrap">
           {steps.map((s, i) => (
@@ -399,6 +420,10 @@ function HowItWorksTab() {
           🧠 Modern detectors (YOLO, SSD, EfficientDet) all follow this rough recipe. The differences are in <i>how</i> they propose boxes and <i>how fast</i> they classify them.
         </span>
       </InfoBox>
+
+      <RikuSays>
+        You just ran a full neural network on your own face. On a webpage. With zero installs. Five years ago this was a research paper. Now it&apos;s a Tuesday. Congratulations — you officially know how modern computer vision works end-to-end.
+      </RikuSays>
     </div>
   );
 }

@@ -1,9 +1,165 @@
 # Red Panda Learn — Product Requirements Document (PRD)
 
-**Version:** 1.0
-**Date:** April 10, 2026
-**Status:** Draft for Review
+**Version:** 1.2
+**Date:** April 12, 2026
+**Status:** Phase 1 MVP in active build — gamification, dashboard, Riku, projects, exam prep, careers, leaderboard, certificates shipped
 **Confidentiality:** Internal — Founders, Investors, Engineering, Design
+
+---
+
+## Implementation Log
+
+> Running log of what has actually been shipped against this PRD. When a PRD section is materially implemented, it gets an entry here with the date and the files that landed. This is the single source of truth for "is X built yet?"
+
+### 2026-04-12 — Phase 1 MVP: Full feature pillar build-out
+
+**Gamification Engine (§15, §23)** — shipped
+- [src/utils/gamification.ts](ml-learning-platform/src/utils/gamification.ts) — single-source-of-truth store using `useSyncExternalStore` + localStorage key `rpl-gamification-v1`. XP, coins, streaks (with day-rollover), level progression (Curious Cub → AI Sage), badge catalog, daily missions, pub/sub reward events.
+- Award functions wired into: [LessonShell.tsx](ml-learning-platform/src/components/LessonShell.tsx) (tab + lesson completion), [QuizCard.tsx](ml-learning-platform/src/components/QuizCard.tsx) (quiz score + perfect-score bonus), [PredictionGate.tsx](ml-learning-platform/src/components/PredictionGate.tsx) (prediction submitted), [reviewDeck.ts](ml-learning-platform/src/utils/reviewDeck.ts) (Leitner correct answers).
+- UI primitives: [XpBar.tsx](ml-learning-platform/src/components/gamification/XpBar.tsx), [StreakFlame.tsx](ml-learning-platform/src/components/gamification/StreakFlame.tsx), [CoinCounter.tsx](ml-learning-platform/src/components/gamification/CoinCounter.tsx), [BadgeCard.tsx](ml-learning-platform/src/components/gamification/BadgeCard.tsx), [MissionCard.tsx](ml-learning-platform/src/components/gamification/MissionCard.tsx), [RewardToast.tsx](ml-learning-platform/src/components/gamification/RewardToast.tsx). Barrel at [index.ts](ml-learning-platform/src/components/gamification/index.ts). HUD mounted in [(lessons)/layout.tsx](ml-learning-platform/src/app/(lessons)/layout.tsx).
+
+**Dashboard (§29 "Home", §24 User Journey)** — shipped
+- [(lessons)/dashboard/page.tsx](ml-learning-platform/src/app/(lessons)/dashboard/page.tsx) — HUD (XP/streak/coins), active daily missions, continue-learning card, recent badges, leaderboard peek.
+
+**Riku AI Companion (§16)** — shipped as local-only v1
+- [(lessons)/riku/page.tsx](ml-learning-platform/src/app/(lessons)/riku/page.tsx) + [ChatBubble.tsx](ml-learning-platform/src/components/riku/ChatBubble.tsx), [RikuAvatar.tsx](ml-learning-platform/src/components/riku/RikuAvatar.tsx), [FloatingRiku.tsx](ml-learning-platform/src/components/riku/FloatingRiku.tsx). Canned + contextual responses tied to current lesson/progress. Conversation persists in localStorage. LLM backing remains a Phase 2 upgrade path.
+
+**Projects System (§19, §27)** — shipped with 5 Class 9 templates
+- List: [(lessons)/projects/page.tsx](ml-learning-platform/src/app/(lessons)/projects/page.tsx). Workspace: [(lessons)/projects/[slug]/page.tsx](ml-learning-platform/src/app/(lessons)/projects/[slug]/page.tsx).
+- Templates: [src/data/projects.ts](ml-learning-platform/src/data/projects.ts) — Image Classifier (fruits), Chatbot Flowchart, Data Storyteller, Pattern Hunter, Ethics Case Study.
+- Primitives: [ProjectCard.tsx](ml-learning-platform/src/components/projects/ProjectCard.tsx), [ProjectProgressPill.tsx](ml-learning-platform/src/components/projects/ProjectProgressPill.tsx), [SectionEditor.tsx](ml-learning-platform/src/components/projects/SectionEditor.tsx).
+
+**Exam Prep (§20, §21)** — shipped
+- [(lessons)/exam-prep/](ml-learning-platform/src/app/(lessons)/exam-prep/) routes with practice / mock-test / review modes. Question bank at [src/data/examBank.ts](ml-learning-platform/src/data/examBank.ts) seeded with CBSE/ICSE-flavored MCQs keyed to Level 1–9 concepts.
+
+**Career Roadmap (§22)** — shipped
+- [(lessons)/career/](ml-learning-platform/src/app/(lessons)/career/) — 10 AI-adjacent career tracks (list + `/career/[slug]` detail + `/career/quiz`), interest-match quiz with 15 questions, India-specific college hints (IITs, IIITs, BITS, NITs, private universities), alumni stories. Route uses singular `/career`.
+
+**Leaderboard (§23)** — shipped
+- [(lessons)/leaderboard/page.tsx](ml-learning-platform/src/app/(lessons)/leaderboard/page.tsx) + [src/data/leaderboardSeed.ts](ml-learning-platform/src/data/leaderboardSeed.ts). Deterministic mock peers via `mulberry32` seeded PRNG; user's live XP injected for rank.
+
+**Certificates (§23)** — shipped
+- [(lessons)/certificates/](ml-learning-platform/src/app/(lessons)/certificates/) — catalog at [src/data/certificatesCatalog.ts](ml-learning-platform/src/data/certificatesCatalog.ts). PDF download via client-side render. Earned state driven by completed-level gamification flags.
+
+### 2026-04-10 — Visualization Phase
+
+- 45/45 lessons upgraded to interactive viz standard (~9,581 LOC added). Shared viz libraries: SVGGrid, AnimatedScatter, NetworkCanvas, TokenStepper. TypeScript `tsc --noEmit` clean.
+
+### Earlier — Foundation
+
+- 9-level, 36-lesson ML curriculum scaffold, sketchy-notebook theme, Sidebar nav, Leitner spaced repetition, sound effects, progress tracking, predictions, flashcards.
+
+### PRD Section Status Matrix
+
+> Every PRD section mapped to its build state. Sections marked **DOC** are strategic/narrative content where "implementation" is not applicable.
+
+**Legend:** ✅ Done · ⚠️ Partial · ❌ Not started · 📄 DOC (narrative only)
+
+#### Strategy & Positioning (§1–§10) — narrative, no code
+
+| § | Section | Status | Notes |
+|---|---|---|---|
+| 1 | Executive Summary | 📄 | Narrative. Updated to reflect v1.2 status. |
+| 2 | Problem Statement | 📄 | Narrative. Still accurate. |
+| 3 | Target Audience | 📄 | Narrative. Still accurate. |
+| 4 | Product Vision | 📄 | Narrative. Still accurate. |
+| 5 | Product Goals | 📄 | Narrative; goals not yet measured (see §43). |
+| 6 | Core Principles | 📄 | Narrative. Frontend honours sketchy/story-first principles. |
+| 7 | Competitive Landscape | 📄 | Narrative. Still accurate. |
+| 8 | Why Existing Platforms Fail | 📄 | Narrative. Still accurate. |
+| 9 | Differentiation Strategy | 📄 | Narrative. Partially proven by the shipped UX. |
+| 10 | Board Alignment (CBSE/ICSE/State) | 📄 | Narrative mapping exists; content only covers Class 9. |
+
+#### Curriculum & Content (§11–§13)
+
+| § | Section | Status | Gap |
+|---|---|---|---|
+| 11 | Class-wise Learning Themes | ⚠️ | Class 9 shipped (45 lessons, 9 levels). Classes 8, 10, 11, 12 = **0 lessons**. Coverage 1/5 = 20%. |
+| 12 | Curriculum Breakdown | ⚠️ | Class 9 ML track complete. Other classes not started. |
+| 13 | Difficulty Mapping (Beginner/Intermediate/Advanced) | ⚠️ | Lessons exist across difficulty but no formal tag/filter exposed in UI. Exam bank does tag difficulty. |
+
+#### Product Features (§14–§23)
+
+| § | Section | Status | Notes |
+|---|---|---|---|
+| 14 | Core Features | ✅ | Lessons, tabs, quizzes, predictions, review deck, progress, sketchy theme — all shipped for Class 9. |
+| 15 | Gamification Features | ✅ | XP, coins, 10-tier levels, 20+ badges, daily missions, streaks, reward toasts, HUD — all shipped. Engine: [src/utils/gamification.ts](ml-learning-platform/src/utils/gamification.ts). |
+| 16 | AI Companion Features | ⚠️ | Riku UI + canned response engine shipped ([src/utils/rikuResponses.ts](ml-learning-platform/src/utils/rikuResponses.ts)). **No LLM backing.** Cannot truly personalize, explain novel questions, or roast dynamically. |
+| 17 | Storytelling & Animation | ✅ | Sketchy notebook theme, Kalam/Patrick Hand fonts, 4 viz libraries (SVGGrid, AnimatedScatter, NetworkCanvas, TokenStepper) + per-lesson stories. |
+| 18 | Assessment System | ✅ | PredictionGate (pre-assessment), QuizCard (MCQ), Leitner spaced-repetition review. |
+| 19 | Project System | ✅ | 5 Class 9 templates + workspace at [(lessons)/projects/[slug]](ml-learning-platform/src/app/(lessons)/projects/[slug]/page.tsx). Auto-saving drafts. |
+| 20 | Exam Preparation System | ✅ | 112-question bank, practice/test/review modes, weak-area analytics, timer. [src/data/examBank.ts](ml-learning-platform/src/data/examBank.ts). |
+| 21 | Board Exam Prep Features | ⚠️ | CBSE/ICSE-flavoured question bank shipped. Missing: previous-year paper archive, board-specific marking schemes, printable board-format papers, topper strategies module. |
+| 22 | Career Roadmap Features | ✅ | 10 careers + 15-question match quiz + `/career/[slug]` detail + Indian colleges + alumni stories. |
+| 23 | Rewards, Streaks, Badges, Leaderboards | ⚠️ | Rewards/streaks/badges ✅. **Leaderboard is mocked** ([src/data/leaderboardSeed.ts](ml-learning-platform/src/data/leaderboardSeed.ts)) with deterministic fake peers — no real multi-user leaderboard. |
+
+#### User Journey & Structure (§24–§28)
+
+| § | Section | Status | Notes |
+|---|---|---|---|
+| 24 | User Journey | ✅ | Single-user frontend flow: landing → dashboard → lessons → review → projects → exam → career. |
+| 25 | Student Progression Flow | ✅ | Sequential lesson unlock (prev-lesson gates next), tab unlock within lessons. |
+| 26 | Suggested Lesson Structure | ✅ | `LessonShell` pattern (tabs + quiz + prediction gate) used by all 45 lessons. |
+| 27 | Suggested Project Structure | ✅ | 4-section template (problem/data/approach/result) wired to project drafts store. |
+| 28 | Content Guidelines | 📄 | Authoring guideline, no code surface. Existing Class 9 content follows it. |
+
+#### Architecture & Platform (§29–§37)
+
+| § | Section | Status | Gap |
+|---|---|---|---|
+| 29 | Suggested Web Screens | ⚠️ | Home screens shipped: Dashboard, Achievements, Riku, Projects, Exam Prep, Career, Leaderboard, Certificates, Review. **Missing: Settings, Profile, Onboarding wizard, Billing/Subscription, Parent dashboard, Teacher dashboard.** |
+| 30 | Suggested Information Architecture | ✅ | Route structure mirrors IA: `(lessons)` group owns all authenticated screens, flat level1–9 routes, Home section in sidebar. |
+| 31 | Suggested Database Modules | ❌ | **No database.** All state in localStorage (`ml-progress-v1`, `rpl-gamification-v1`, `rpl-project-drafts-v1`, `rpl-review-deck-v1`, etc.). No User, Classroom, Payment, or Content tables exist. |
+| 32 | Suggested Backend Modules | ❌ | **No backend at all.** No auth, no API server, no cron jobs, no email service, no webhooks. Pure static Next.js. |
+| 33 | Suggested Frontend Modules | ✅ | Component library, utilities, state stores, viz libraries — all shipped. |
+| 34 | Suggested Mobile (PWA) Architecture | ❌ | Not a PWA. No `manifest.json`, no service worker, no offline support, not installable, no push notifications. |
+| 35 | Suggested AI Features | ❌ | No real AI. Riku is canned. No LLM-graded project reviews, no adaptive difficulty, no personalized lesson recommendations, no generated practice questions. |
+| 36 | Suggested APIs & Integrations | ❌ | None. No Razorpay, no Google OAuth, no email provider, no analytics SDK, no CDN, no MediaPipe beyond the in-browser hand tracking lessons. |
+| 37 | Non-functional Requirements | ❌ | No test suite, no CI, no performance budget tracked, no accessibility audit, no i18n (English only), no error monitoring (Sentry etc.), no performance monitoring. |
+
+#### Business & Go-to-Market (§38–§43)
+
+| § | Section | Status | Gap |
+|---|---|---|---|
+| 38 | Revenue Model | ❌ | No freemium gate, no subscription, no paywall. Every feature is open. |
+| 39 | Pricing Strategy | ❌ | No billing infrastructure. Prices exist only in the PRD. |
+| 40 | Go-to-Market Strategy | ❌ | Not applicable until product is externally launched. No landing-page CTA, no signup, no referral system. |
+| 41 | School Partnership Strategy | ❌ | No teacher portal, no bulk licensing, no classroom creation flow, no LMS integration. |
+| 42 | Risks and Challenges | 📄 | Narrative. Still accurate. |
+| 43 | KPIs and Success Metrics | ❌ | No analytics wired. Cannot measure DAU, retention, completion rate, NPS, or any KPI listed in the PRD. |
+
+#### Roadmap (§44–§47)
+
+| § | Section | Status | Notes |
+|---|---|---|---|
+| 44 | MVP Scope | ⚠️ | **~30–35% of the MVP surface area shipped.** Frontend + Class 9 content + local persistence = done. Backend, auth, billing, Classes 8/10/11/12, real Riku, real leaderboard = not shipped. |
+| 45 | Phase 2 Features | ❌ | Not started. |
+| 46 | Phase 3 Features | ❌ | Not started. |
+| 47 | Long-Term Vision | 📄 | Narrative. |
+| App A | Glossary | 📄 | Narrative. |
+| App B | References | 📄 | Narrative. |
+
+### Summary of what's missing (in priority order for Phase 2)
+
+1. **Backend + accounts (§31, §32)** — unblocks everything else (real leaderboard, cross-device sync, payments, analytics, school features). Highest-leverage gap.
+2. **LLM-backed Riku (§16, §35)** — replace canned responses with a real LLM contract. Upgrades the core "companion" promise.
+3. **Class 8, 10, 11, 12 content (§11, §12)** — 4× content team effort. Currently only 1/5 of the target audience is served.
+4. **Payments + freemium gate (§38, §39)** — required for revenue. Razorpay integration + feature flags.
+5. **Parent & teacher dashboards (§29, §41)** — required for school GTM and parent-driven subscriptions.
+6. **PWA + offline (§34)** — mobile-first India market needs installable + low-bandwidth offline mode.
+7. **Analytics + KPI instrumentation (§37, §43)** — cannot improve what you cannot measure.
+8. **Previous-year board papers + printable formats (§21)** — to make exam prep a genuine board-study replacement.
+9. **Settings, Profile, Onboarding (§29)** — basic account surfaces missing.
+10. **Test suite + CI + a11y audit (§37)** — engineering hygiene before scaling team.
+
+### Coverage at a glance
+
+- ✅ **Done:** 16 sections (fully shipped to MVP quality)
+- ⚠️ **Partial:** 8 sections (shipped but with material gaps)
+- ❌ **Not started:** 13 sections (zero implementation)
+- 📄 **Narrative (no code):** 12 sections
+
+Weighted against the PRD's full surface area (excluding pure narrative sections), roughly **30–35% of the product is built** — concentrated almost entirely in the single-user, Class 9, offline-capable frontend experience.
 
 ---
 

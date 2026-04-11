@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Lightbulb, Check, RotateCcw } from "lucide-react";
+import { awardPrediction } from "../utils/gamification";
 
 export type PredictionType = "mcq" | "numeric" | "text";
 
@@ -51,8 +52,10 @@ export default function PredictionGate({ lessonPath, prompt }: Props) {
 
   function handleSubmit() {
     if (!guess.trim()) return;
+    const alreadySubmitted = loadAll()[lessonPath] !== undefined;
     saveOne(lessonPath, guess);
     setSubmitted(guess);
+    if (!alreadySubmitted) awardPrediction();
   }
 
   function handleReset() {

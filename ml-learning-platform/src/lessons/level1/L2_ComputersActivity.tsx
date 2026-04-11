@@ -7,6 +7,15 @@ import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop, playSuccess } from "../../utils/sounds";
 
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
+
 /* Sketchy palette */
 const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
@@ -64,6 +73,12 @@ function BinaryTranslator() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        A computer is a machine that speaks only ONE language: on/off, yes/no, 1/0. That&apos;s it.
+        Everything else — your name, this text, every emoji — is built on top of these eight little
+        switches. Flip some and watch the number (and sometimes a letter!) appear.
+      </RikuSays>
+
       <div className="card-sketchy p-5 space-y-5">
         <h3 className="font-hand text-base text-center" style={{ color: INK }}>
           Click each switch to toggle a <span style={{ color: CORAL, fontWeight: 700 }}>bit</span>
@@ -188,6 +203,12 @@ function BinaryTranslator() {
         Computers store everything as 0s and 1s. Each 0 or 1 is a <strong>bit</strong>. Eight bits together
         are a <strong>byte</strong>. With 8 bits you can represent 256 different values (0–255).
       </InfoBox>
+
+      <RikuSays>
+        Try setting the bits to <b>01000001</b>. That&apos;s 65 in decimal, which is the letter
+        &quot;A&quot; in a code called ASCII. Every keyboard letter has a secret number like this.
+        Spooky? Kinda. Awesome? Definitely.
+      </RikuSays>
     </div>
   );
 }
@@ -209,6 +230,12 @@ function EncodeMessage() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Here&apos;s the wild part: when you text a friend, your phone turns every letter into a
+        tower of 0s and 1s EXACTLY like this, then shoots those bits through the air as tiny
+        radio blinks. The phone on the other side rebuilds the letters. All under a second.
+      </RikuSays>
+
       <div className="card-sketchy p-5 space-y-4">
         <h3 className="font-hand text-base text-center" style={{ color: INK }}>
           Type a message to see its <span style={{ color: LAVENDER, fontWeight: 700 }}>binary code</span>
@@ -292,6 +319,12 @@ function EncodeMessage() {
         Every letter, number, and symbol has a binary code. When you send a text, your phone converts each character
         to binary, sends it as electrical signals, and the other phone decodes it back!
       </InfoBox>
+
+      <RikuSays>
+        Try typing your name. Each letter is exactly 8 bits — 1 byte per character. So
+        &quot;Riku&quot; is just 32 bits: four stacks of on/off switches sitting in a row. Your
+        whole name, encoded.
+      </RikuSays>
     </div>
   );
 }
@@ -427,6 +460,12 @@ function InsideComputer() {
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Your phone is a tiny computer with a camera, a mic, a screen, and a speaker stapled to
+        it. Fancy. But underneath, every computer is the same four parts: input, brain (CPU),
+        memory, and output. Click around the diagram to meet each one.
+      </RikuSays>
+
       <div className="card-sketchy p-5 space-y-4">
         <h3 className="font-hand text-base text-center" style={{ color: INK }}>
           Click a component to learn about it
@@ -549,6 +588,13 @@ function InsideComputer() {
         The CPU is the brain. It reads instructions from memory, does the math, and sends results to the output —
         billions of times per second.
       </InfoBox>
+
+      <RikuSays>
+        Hit &quot;Run a Program&quot; and follow the yellow dot. That&apos;s basically what
+        happens every time you tap an app: input goes in, the CPU thinks, memory helps it
+        remember, and then output shows up on your screen. Loop that a few billion times per
+        second and you get... well, everything.
+      </RikuSays>
     </div>
   );
 }

@@ -5,13 +5,38 @@ import { Split, BookOpen, TestTube, Trophy } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
+import {
+  KNNViz,
+  generateClassification2D,
+  type Point,
+} from "@/components/viz/ml-algorithms";
+import { ScatterPlot } from "@/components/viz/data-viz";
 
-const INK = "#2b2a35";
 const CORAL = "#ff6b6b";
 const MINT = "#4ecdc4";
 const YELLOW = "#ffd93d";
 const SKY = "#6bb6ff";
 const PAPER = "#fffdf5";
+
+/* ------------------------------------------------------------------ */
+/*  Riku — local dialogue helper                                       */
+/* ------------------------------------------------------------------ */
+
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">
+        {children}
+      </p>
+    </div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Tab 1 – The Cheating Student (story)                              */
@@ -56,6 +81,11 @@ function CheatingTab() {
       <p className="font-hand text-base text-foreground text-center">
         Why we don't test models on the same data we trained them on.
       </p>
+
+      <RikuSays>
+        Training on everything and then "testing" on the same data is like
+        grading your own homework. You'll give yourself an A every time.
+      </RikuSays>
 
       <div
         className="card-sketchy p-5 space-y-3"
@@ -105,6 +135,11 @@ function CheatingTab() {
         </button>
       </div>
 
+      <RikuSays>
+        The test set is the part we DON'T peek at. Like a surprise quiz for the
+        model — the only way to know if it really learned, not just memorized.
+      </RikuSays>
+
       <InfoBox variant="amber">
         Same idea applies to ML models! If you test a model on the same data it
         learned from, you can't tell if it really learned the pattern — or just
@@ -125,16 +160,41 @@ function CheatingTab() {
 /*  Tab 2 – Interactive Splitter                                       */
 /* ------------------------------------------------------------------ */
 
-// 20 fake data points, deterministic positions
-const DATA_POINTS = Array.from({ length: 20 }, (_, i) => ({
-  id: i,
-  x: 30 + ((i * 53) % 340),
-  y: 30 + ((i * 31) % 130),
-}));
-
 function SplitterTab() {
   const [trainPct, setTrainPct] = useState(80);
-  const trainCount = Math.round((trainPct / 100) * DATA_POINTS.length);
+
+  // A reusable labeled dataset — we'll slice it into train/test.
+  const fullData = useMemo<Point[]>(
+    () => generateClassification2D(40, 31),
+    []
+  );
+
+  const trainCount = Math.round((trainPct / 100) * fullData.length);
+
+  const { trainPoints, testPoints } = useMemo(() => {
+    return {
+      trainPoints: fullData.slice(0, trainCount),
+      testPoints: fullData.slice(trainCount),
+    };
+  }, [fullData, trainCount]);
+
+  // Scatter data combining train + test with category labels.
+  const scatterData = useMemo(() => {
+    return [
+      ...trainPoints.map((p) => ({
+        x: p.x,
+        y: p.y,
+        category: "train",
+        label: `train · class ${p.label}`,
+      })),
+      ...testPoints.map((p) => ({
+        x: p.x,
+        y: p.y,
+        category: "test",
+        label: `test · class ${p.label}`,
+      })),
+    ];
+  }, [trainPoints, testPoints]);
 
   // Quality estimates (illustrative, not real ML math)
   const trainTooSmall = trainPct < 50;
@@ -144,101 +204,47 @@ function SplitterTab() {
   return (
     <div className="space-y-4">
       <p className="font-hand text-base text-foreground text-center">
-        Drag the slider to split your dataset. Watch what happens!
+        Drag the slider to split your dataset. Watch the model update!
       </p>
 
-      {/* Animated split SVG: dataset → flow → train/test bins */}
-      <div className="card-sketchy notebook-grid p-4">
-        <svg viewBox="0 0 560 240" className="w-full max-w-[600px] mx-auto">
-          <defs>
-            <radialGradient id="ds-pool" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ffe066" />
-              <stop offset="100%" stopColor={YELLOW} />
-            </radialGradient>
-            <radialGradient id="ds-train" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#7ee0d8" />
-              <stop offset="100%" stopColor={MINT} />
-            </radialGradient>
-            <radialGradient id="ds-test" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ff8a8a" />
-              <stop offset="100%" stopColor={CORAL} />
-            </radialGradient>
-            <marker id="ds-arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-              <path d="M0,0 L10,4 L0,8 Z" fill={INK} />
-            </marker>
-          </defs>
+      <RikuSays>
+        Same dataset, same model — but the split changes which points the model
+        "sees" and which ones we keep hidden to grade it. Slide around and feel
+        the difference.
+      </RikuSays>
 
-          {/* Source pool */}
-          <circle cx={80} cy={120} r={56} fill="url(#ds-pool)" stroke={INK} strokeWidth={2.5}
-            className="pulse-glow" style={{ color: YELLOW }} />
-          <circle cx={80} cy={120} r={56} fill="none" stroke={INK} strokeWidth={2}
-            strokeDasharray="3 4" className="wobble" opacity={0.6} />
-          <text x={80} y={117} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[12px] font-bold">
-            Dataset
-          </text>
-          <text x={80} y={133} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[11px] font-bold">
-            {DATA_POINTS.length}
-          </text>
-
-          {/* Flow lines */}
-          <line x1={140} y1={100} x2={360} y2={60}
-            stroke={MINT} strokeWidth={3} strokeLinecap="round"
-            className="signal-flow" style={{ color: MINT }}
-            markerEnd="url(#ds-arrow)" />
-          <line x1={140} y1={140} x2={360} y2={180}
-            stroke={CORAL} strokeWidth={3} strokeLinecap="round"
-            className="signal-flow" style={{ color: CORAL }}
-            markerEnd="url(#ds-arrow)" />
-
-          {/* Traveling pulse dots */}
-          <circle r={4} fill={MINT} stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.4s" repeatCount="indefinite" path="M140,100 L360,60" />
-          </circle>
-          <circle r={4} fill={CORAL} stroke={INK} strokeWidth={1}>
-            <animateMotion dur="1.6s" repeatCount="indefinite" path="M140,140 L360,180" />
-          </circle>
-
-          {/* Train bin */}
-          <rect x={370} y={20} width={170} height={80} rx={14}
-            fill="url(#ds-train)" stroke={INK} strokeWidth={2.5}
-            className="pulse-glow" style={{ color: MINT }} />
-          <text x={455} y={48} textAnchor="middle" fill="#fff" fontFamily="Kalam" className="text-[13px] font-bold">
-            Training {trainPct}%
-          </text>
-          <text x={455} y={68} textAnchor="middle" fill="#fff" fontFamily="Kalam" className="text-[12px] font-bold">
-            {trainCount} examples
-          </text>
-          {/* dot grid */}
-          {DATA_POINTS.slice(0, trainCount).map((_, i) => (
-            <circle key={`tr-${i}`}
-              cx={385 + (i % 10) * 16} cy={88}
-              r={3.5} fill="#fff" stroke={INK} strokeWidth={1} />
-          ))}
-
-          {/* Test bin */}
-          <rect x={370} y={140} width={170} height={80} rx={14}
-            fill="url(#ds-test)" stroke={INK} strokeWidth={2.5}
-            className="pulse-glow" style={{ color: CORAL }} />
-          <text x={455} y={168} textAnchor="middle" fill="#fff" fontFamily="Kalam" className="text-[13px] font-bold">
-            Test {100 - trainPct}%
-          </text>
-          <text x={455} y={188} textAnchor="middle" fill="#fff" fontFamily="Kalam" className="text-[12px] font-bold">
-            {DATA_POINTS.length - trainCount} examples
-          </text>
-          {DATA_POINTS.slice(trainCount).map((_, i) => (
-            <circle key={`te-${i}`}
-              cx={385 + (i % 10) * 16} cy={208}
-              r={3.5} fill="#fff" stroke={INK} strokeWidth={1} />
-          ))}
-
-          {/* Branch labels */}
-          <text x={250} y={75} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[11px] font-bold">
-            <tspan>train</tspan>
-          </text>
-          <text x={250} y={175} textAnchor="middle" fill={INK} fontFamily="Kalam" className="text-[11px] font-bold">
-            <tspan>test</tspan>
-          </text>
-        </svg>
+      {/* Split visualization — train vs test scatter */}
+      <div className="card-sketchy p-4" style={{ background: PAPER }}>
+        <p className="font-hand text-sm font-bold text-foreground mb-2 text-center">
+          Your dataset, split in two
+        </p>
+        <div className="flex justify-center">
+          <ScatterPlot
+            data={scatterData}
+            width={520}
+            height={260}
+            xLabel="feature 1"
+            yLabel="feature 2"
+            categoryColors={{ train: MINT, test: CORAL }}
+            pointRadius={6}
+          />
+        </div>
+        <div className="flex gap-4 justify-center mt-2 font-hand text-xs">
+          <span className="flex items-center gap-1">
+            <span
+              className="inline-block w-3 h-3 rounded-full border-2 border-foreground"
+              style={{ background: MINT }}
+            />
+            train ({trainPoints.length})
+          </span>
+          <span className="flex items-center gap-1">
+            <span
+              className="inline-block w-3 h-3 rounded-full border-2 border-foreground"
+              style={{ background: CORAL }}
+            />
+            test ({testPoints.length})
+          </span>
+        </div>
       </div>
 
       {/* Slider */}
@@ -261,6 +267,22 @@ function SplitterTab() {
           <span>80/20</span>
           <span>95/5</span>
         </div>
+      </div>
+
+      {/* The trained model — KNN using ONLY the train subset */}
+      <div className="card-sketchy p-4 space-y-2" style={{ background: PAPER }}>
+        <p className="font-hand text-sm font-bold text-foreground text-center">
+          The trained model (click to drop a test point)
+        </p>
+        <p className="font-hand text-xs text-muted-foreground text-center">
+          This KNN model only sees the {trainPoints.length} training points.
+          Click anywhere on the plot to see it classify a new example.
+        </p>
+        <KNNViz
+          key={`knn-${trainPct}`}
+          points={trainPoints}
+          initialK={3}
+        />
       </div>
 
       {/* Quality feedback */}
@@ -332,6 +354,11 @@ function LeakTab() {
       <p className="font-hand text-base text-foreground text-center">
         For each scenario, decide: <b>data leak</b> or <b>clean split</b>?
       </p>
+
+      <RikuSays>
+        A data leak is any sneaky way test answers end up in training. Even one
+        duplicate row can make a model look like a genius. Train smart, friends.
+      </RikuSays>
 
       <div className="space-y-3">
         {LEAKS.map((l, i) => {

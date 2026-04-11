@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import type { ReactNode } from "react";
 import { Box, ListOrdered, Zap, Sparkles } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playPop, playSuccess, playError } from "../../utils/sounds";
+
+function RikuSays({ children }: { children: ReactNode }) {
+  return (
+    <div className="card-sketchy p-3 flex gap-3 items-start" style={{ background: "#fff8e7" }}>
+      <span className="text-2xl" aria-hidden>🐼</span>
+      <p className="font-hand text-sm text-foreground leading-snug">{children}</p>
+    </div>
+  );
+}
 
 /* Sketchy palette */
 const INK = "#2b2a35";
@@ -72,6 +82,10 @@ function InputOutputTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        A machine is anything that follows instructions without thinking. You feed it an <b>input</b>, it runs a <b>rule</b>, and it spits out an <b>output</b>. Your microwave is a machine. Your dishwasher is a machine. Your little sibling is... not.
+      </RikuSays>
+
       {/* Rule selector */}
       <div className="flex flex-wrap gap-2 justify-center">
         {RULES.map((r, i) => (
@@ -257,6 +271,10 @@ function InputOutputTab() {
       <InfoBox variant="blue">
         A machine takes something in, does something to it, and gives something back. Same input + same rule = same output, every time!
       </InfoBox>
+
+      <RikuSays>
+        Notice something? Swap the <b>rule</b> and you get a different output from the same input. That&apos;s the whole trick — a machine is really just a <i>function</i> waiting to be fed.
+      </RikuSays>
     </div>
   );
 }
@@ -389,6 +407,10 @@ function InstructionSequenceTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Instructions are the <i>how</i>, not the <i>why</i>. A machine never asks &quot;why am I doing this?&quot; It just runs the list, one step at a time, in order. Program the robot to grab that star!
+      </RikuSays>
+
       <div className="flex justify-center">
         <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full" style={{ maxWidth: svgW }}>
           <defs>
@@ -511,6 +533,10 @@ function InstructionSequenceTab() {
       <InfoBox variant="amber">
         Order matters! The robot follows your instructions exactly, one at a time.
       </InfoBox>
+
+      <RikuSays>
+        Fun fact: that list of steps you just made? Programmers call it a <b>program</b>. You literally just wrote code.
+      </RikuSays>
     </div>
   );
 }
@@ -598,6 +624,10 @@ function SpeedTab() {
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Here&apos;s where machines get scary-good: <b>speed</b>. You and me? We can add maybe one pair of numbers per second. A modern chip does <i>billions</i>. Race a computer and see who blinks first — spoiler, it&apos;s you.
+      </RikuSays>
+
       <div className="card-sketchy space-y-2">
         <label className="block font-hand text-sm" style={{ color: INK }}>
           Number of additions: <span style={{ color: CORAL, fontWeight: 700 }}>{additionCount.toLocaleString()}</span>
@@ -674,6 +704,10 @@ function SpeedTab() {
       <InfoBox variant="green">
         A modern computer can do billions of calculations per second. That is faster than you can blink!
       </InfoBox>
+
+      <RikuSays>
+        This is the superpower that makes ML possible. Training a model means doing <i>trillions</i> of tiny sums. A human with a pencil would need several lifetimes. A GPU does it over lunch.
+      </RikuSays>
     </div>
   );
 }
@@ -750,6 +784,10 @@ const EXAMPLES: {
 function ExamplesTab() {
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Once you see the <b>input → rule → output</b> pattern, you can&apos;t un-see it. Microwaves, ATMs, traffic lights — they&apos;re all the same idea in different plastic shells.
+      </RikuSays>
+
       <p className="text-center font-hand text-base" style={{ color: INK }}>
         Look around — machines are everywhere! Each one is just{" "}
         <span style={{ color: CORAL, fontWeight: 700 }}>input</span> →{" "}
@@ -837,6 +875,10 @@ function ExamplesTab() {
         Pick any object near you — a fan, a microwave, a doorbell. Can you write down its{" "}
         <b>input</b>, <b>rule</b>, and <b>output</b>? That's the secret of every machine in the world.
       </InfoBox>
+
+      <RikuSays>
+        Next up: what makes a <i>computer</i> special among all these machines? Spoiler: it&apos;s the only machine that can be re-programmed to become a totally different machine, just by swapping its instructions.
+      </RikuSays>
     </div>
   );
 }

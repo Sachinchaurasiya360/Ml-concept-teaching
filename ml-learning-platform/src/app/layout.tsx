@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ML Learning Path — From Machines to Machine Learning",
+  title: "Red Panda Learn — AI Education for Class 8-12",
   description:
-    "A hands-on interactive journey from 'What is a machine?' all the way to building neural networks and CNNs. No prior knowledge needed.",
+    "Learn AI the fun way. Story-driven, gamified, and built for Indian students in Class 8-12. CBSE, ICSE, and State Boards. Not boring lectures. Not heavy coding.",
   icons: "/favicon.svg",
 };
 

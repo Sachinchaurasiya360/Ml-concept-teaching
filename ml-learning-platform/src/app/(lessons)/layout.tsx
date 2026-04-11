@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Brain, GraduationCap } from "lucide-react";
+import { Menu } from "lucide-react";
 import Sidebar from "@/components/Sidebar";
+import RewardToast from "@/components/gamification/RewardToast";
+import XpBar from "@/components/gamification/XpBar";
+import StreakFlame from "@/components/gamification/StreakFlame";
+import CoinCounter from "@/components/gamification/CoinCounter";
+import { initGamification } from "@/utils/gamification";
 
 const BREADCRUMB_MAP: Record<string, { level: string; lesson: string }> = {
+  "/dashboard": { level: "Home", lesson: "Dashboard" },
+  "/achievements": { level: "Home", lesson: "Achievements" },
+  "/exam-prep": { level: "Home", lesson: "Exam Prep" },
+  "/leaderboard": { level: "Home", lesson: "Leaderboard" },
+  "/certificates": { level: "Home", lesson: "Certificates" },
+  "/riku": { level: "Home", lesson: "Chat with Riku" },
+  "/projects": { level: "Home", lesson: "Projects" },
   "/level1/machines": { level: "Level 1", lesson: "Machines & Instructions" },
   "/level1/computers": { level: "Level 1", lesson: "How Computers Work" },
   "/level1/data": { level: "Level 1", lesson: "What Is Data?" },
@@ -51,6 +63,8 @@ const BREADCRUMB_MAP: Record<string, { level: string; lesson: string }> = {
   "/level9/hand-tracking": { level: "Level 9", lesson: "Hand Tracking" },
   "/level9/gesture-recognition": { level: "Level 9", lesson: "Gesture Recognition" },
   "/level9/object-detection": { level: "Level 9", lesson: "Object Detection" },
+  "/career": { level: "Home", lesson: "Career Paths" },
+  "/career/quiz": { level: "Career", lesson: "Career Quiz" },
 };
 
 export default function LessonsLayout({ children }: { children: React.ReactNode }) {
@@ -59,8 +73,11 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const crumb = pathname ? BREADCRUMB_MAP[pathname] : undefined;
 
+  // Boot gamification store (idempotent — safe to call on every mount)
+  useEffect(() => { initGamification(); }, []);
+
   return (
-    <div className="flex h-screen bg-[#fdfbf6]">
+    <div className="flex h-screen bg-background">
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -70,7 +87,7 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Navbar */}
-        <header className="sticky top-0 z-30 bg-[#fdfbf6]/90 backdrop-blur border-b-2 border-[#2b2a35] px-4 py-3 flex items-center gap-3">
+        <header className="sticky top-0 z-30 bg-background/90 backdrop-blur border-b-2 border-foreground px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => {
               if (window.innerWidth < 1024) {
@@ -79,31 +96,29 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
                 setSidebarCollapsed((c) => !c);
               }
             }}
-            className="p-1.5 rounded-lg hover:bg-[#ffd93d]/40 transition-colors border-2 border-transparent hover:border-[#2b2a35]"
+            className="p-1.5 rounded-lg hover:bg-accent-yellow/40 transition-colors border-2 border-transparent hover:border-foreground"
           >
-            <Menu className="w-5 h-5 text-[#2b2a35]" />
+            <Menu className="w-5 h-5 text-foreground" />
           </button>
 
           <div className="flex items-center gap-2">
-            <Brain className="w-5 h-5 hidden lg:block" style={{ color: "var(--accent-coral)" }} />
-            <span className="font-hand text-xl font-bold text-[#2b2a35] hidden lg:block">ML Learning Path</span>
+            <span className="text-xl hidden lg:block" aria-hidden>&#x1F43C;</span>
+            <span className="font-hand text-xl font-bold text-foreground hidden lg:block">Red Panda Learn</span>
           </div>
 
           {crumb && (
             <div className="flex items-center gap-1.5 ml-auto font-hand">
-              <span className="text-[#6b6776] text-sm">{crumb.level}</span>
-              <span className="text-[#6b6776]/50">/</span>
-              <span className="text-[#2b2a35] font-bold text-sm">{crumb.lesson}</span>
+              <span className="text-muted-foreground text-sm">{crumb.level}</span>
+              <span className="text-muted-foreground/50">/</span>
+              <span className="text-foreground font-bold text-sm">{crumb.lesson}</span>
             </div>
           )}
 
           <div className={`flex items-center gap-2 ${crumb ? "" : "ml-auto"}`}>
-            <div
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide border-2 border-[#2b2a35] font-hand"
-              style={{ background: "var(--accent-yellow)", boxShadow: "2px 2px 0 #2b2a35" }}
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              36 Lessons
+            <div className="hidden sm:flex items-center gap-1.5">
+              <XpBar compact />
+              <StreakFlame compact />
+              <CoinCounter compact />
             </div>
           </div>
         </header>
@@ -115,6 +130,8 @@ export default function LessonsLayout({ children }: { children: React.ReactNode 
           </div>
         </main>
       </div>
+
+      <RewardToast />
     </div>
   );
 }

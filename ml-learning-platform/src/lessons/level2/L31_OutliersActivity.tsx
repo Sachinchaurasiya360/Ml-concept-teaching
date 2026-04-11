@@ -6,22 +6,47 @@ import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
 import { playClick, playSuccess, playError } from "../../utils/sounds";
+import {
+  BoxPlot,
+  Histogram,
+  ScatterPlot,
+} from "../../components/viz/data-viz";
+import type { DataPoint } from "../../components/viz/data-viz";
 
-const INK = "#2b2a35";
-const CORAL = "#ff6b6b";
-const MINT = "#4ecdc4";
-const YELLOW = "#ffd93d";
-const SKY = "#6bb6ff";
-const PEACH = "#ffb88c";
+const CORAL = "var(--accent-coral)";
+const MINT = "var(--accent-mint)";
+const YELLOW = "var(--accent-yellow)";
+const SKY = "var(--accent-sky)";
 const PAPER = "#fffdf5";
 
 /* ------------------------------------------------------------------ */
-/*  Tab 1 – Spot the Odd One Out                                       */
+/*  Riku says                                                          */
+/* ------------------------------------------------------------------ */
+
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">
+        {children}
+      </p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tab 1 – Spot the Odd One Out (via BoxPlot)                         */
 /* ------------------------------------------------------------------ */
 
 interface Round {
   label: string;
-  points: { x: number; y: number; isOutlier?: boolean }[];
+  values: number[];
+  realOutliers: number[]; // actual answer values
   hint: string;
 }
 
@@ -29,50 +54,28 @@ const ROUNDS: Round[] = [
   {
     label: "Test scores out of 100",
     hint: "Most kids scored similarly. One score is WAY off.",
-    points: [
-      { x: 80, y: 78 },
-      { x: 100, y: 82 },
-      { x: 130, y: 75 },
-      { x: 160, y: 85 },
-      { x: 190, y: 80 },
-      { x: 220, y: 18, isOutlier: true },
-      { x: 250, y: 88 },
-      { x: 280, y: 76 },
-      { x: 310, y: 84 },
-      { x: 340, y: 79 },
-    ],
+    values: [78, 82, 75, 85, 80, 18, 88, 76, 84, 79, 81, 83],
+    realOutliers: [18],
   },
   {
     label: "Heights of 5th graders (cm)",
     hint: "All kids are roughly the same height... except one.",
-    points: [
-      { x: 80, y: 110 },
-      { x: 110, y: 105 },
-      { x: 140, y: 108 },
-      { x: 170, y: 112 },
-      { x: 200, y: 30, isOutlier: true },
-      { x: 230, y: 109 },
-      { x: 260, y: 111 },
-      { x: 290, y: 107 },
-      { x: 320, y: 113 },
-    ],
+    values: [110, 105, 108, 112, 30, 109, 111, 107, 113, 106, 114],
+    realOutliers: [30],
   },
   {
     label: "Pizza slices eaten at a party",
     hint: "Everyone ate a normal amount... well, almost everyone.",
-    points: [
-      { x: 80, y: 130 },
-      { x: 110, y: 125 },
-      { x: 140, y: 135 },
-      { x: 170, y: 128 },
-      { x: 200, y: 132 },
-      { x: 230, y: 138 },
-      { x: 260, y: 50, isOutlier: true },
-      { x: 290, y: 130 },
-      { x: 320, y: 127 },
-    ],
+    values: [3, 2, 4, 3, 5, 2, 18, 3, 4, 2, 3, 4],
+    realOutliers: [18],
   },
 ];
+
+const GUESS_CHOICES: Record<number, number[]> = {
+  0: [80, 18, 88],
+  1: [110, 30, 113],
+  2: [3, 18, 4],
+};
 
 function SpotTab() {
   const [round, setRound] = useState(0);
@@ -81,38 +84,45 @@ function SpotTab() {
   const [showHint, setShowHint] = useState(false);
 
   const r = ROUNDS[round];
-  const correctIdx = useMemo(() => r.points.findIndex((p) => p.isOutlier), [r]);
-  const isCorrect = picked === correctIdx;
+  const choices = GUESS_CHOICES[round];
+  const isCorrect = picked !== null && r.realOutliers.includes(picked);
 
   const handlePick = useCallback(
-    (i: number) => {
+    (v: number) => {
       if (picked !== null) return;
-      setPicked(i);
-      if (i === correctIdx) {
+      setPicked(v);
+      if (r.realOutliers.includes(v)) {
         playSuccess();
         setScore((s) => s + 1);
       } else {
         playError();
       }
     },
-    [picked, correctIdx]
+    [picked, r.realOutliers],
   );
 
   const handleNext = useCallback(() => {
     playClick();
     setPicked(null);
     setShowHint(false);
-    setRound((r) => (r + 1) % ROUNDS.length);
+    setRound((prev) => (prev + 1) % ROUNDS.length);
   }, []);
 
   return (
     <div className="space-y-4">
+      <RikuSays>
+        A box plot is like a box with whiskers. The whiskers show the
+        &quot;normal&quot; range. The dots sitting outside? Outliers. The
+        library auto-flags anything beyond 1.5× the inter-quartile range.
+      </RikuSays>
+
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="font-hand text-sm font-bold uppercase tracking-wider text-muted-foreground">
           Round {round + 1} / {ROUNDS.length}
         </p>
         <p className="font-hand text-sm font-bold text-foreground">
-          Score: <span style={{ color: CORAL }}>{score}</span> / {ROUNDS.length}
+          Score: <span style={{ color: CORAL }}>{score}</span> /{" "}
+          {ROUNDS.length}
         </p>
       </div>
 
@@ -120,117 +130,60 @@ function SpotTab() {
         {r.label}
       </p>
 
-      <div className="card-sketchy notebook-grid p-4" style={{ background: PAPER }}>
-        <svg width="100%" viewBox="0 0 420 200" style={{ maxHeight: 260 }}>
-          <defs>
-            <radialGradient id="dot-sky" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#94caff" />
-              <stop offset="100%" stopColor={SKY} />
-            </radialGradient>
-            <radialGradient id="dot-coral" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ff9b9b" />
-              <stop offset="100%" stopColor={CORAL} />
-            </radialGradient>
-            <radialGradient id="dot-peach" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ffd0b3" />
-              <stop offset="100%" stopColor={PEACH} />
-            </radialGradient>
-          </defs>
-          {/* Axes */}
-          <line x1="40" y1="170" x2="400" y2="170" stroke={INK} strokeWidth="2" />
-          <line x1="40" y1="20" x2="40" y2="170" stroke={INK} strokeWidth="2" />
-          <text
-            x="220"
-            y="195"
-            textAnchor="middle"
-            fill={INK}
-            opacity="0.6"
-            style={{ fontFamily: "Patrick Hand, cursive", fontSize: 12 }}
-          >
-            kids →
-          </text>
+      <div
+        className="card-sketchy notebook-grid p-4"
+        style={{ background: PAPER }}
+      >
+        <BoxPlot
+          data={r.values}
+          width={480}
+          height={260}
+          labels={[r.label]}
+          yLabel="value"
+        />
+      </div>
 
-          {/* Points */}
-          {r.points.map((p, i) => {
-            const isPicked = picked === i;
-            const reveal = picked !== null;
-            const correct = p.isOutlier;
-            const fill = !reveal
-              ? "url(#dot-sky)"
-              : correct
-                ? "url(#dot-coral)"
-                : isPicked
-                  ? "url(#dot-peach)"
-                  : "url(#dot-sky)";
-            return (
-              <g key={i}>
-                {reveal && correct && (
-                  <circle
-                    cx={p.x}
-                    cy={p.y}
-                    r={14}
-                    fill="none"
-                    stroke={CORAL}
-                    strokeWidth={3}
-                    className="fire-ring"
-                  />
-                )}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={isPicked || (reveal && correct) ? 12 : 9}
-                  fill={fill}
-                  stroke={INK}
-                  strokeWidth="2"
-                  onClick={() => handlePick(i)}
-                  className={reveal && correct ? "pulse-glow" : ""}
-                  style={{
-                    cursor: picked === null ? "pointer" : "default",
-                    transition: "all 0.3s ease",
-                    color: CORAL,
-                    filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)",
-                  }}
-                />
-                {reveal && correct && (
-                  <text
-                    x={p.x}
-                    y={p.y - 18}
-                    textAnchor="middle"
-                    fill={CORAL}
-                    style={{
-                      fontFamily: "Kalam, cursive",
-                      fontSize: 14,
-                      fontWeight: 700,
-                    }}
-                  >
-                    OUTLIER!
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+      <p className="font-hand text-sm text-center text-muted-foreground">
+        Which value sits OUTSIDE the whiskers?
+      </p>
+
+      <div className="flex flex-wrap justify-center gap-2">
+        {choices.map((v) => {
+          const chosen = picked === v;
+          const correct = r.realOutliers.includes(v);
+          let bg: string = SKY;
+          if (picked !== null) {
+            if (correct) bg = MINT;
+            else if (chosen) bg = CORAL;
+          }
+          return (
+            <button
+              key={v}
+              onClick={() => handlePick(v)}
+              disabled={picked !== null}
+              className="btn-sketchy font-hand text-sm"
+              style={{ background: bg }}
+            >
+              {v}
+            </button>
+          );
+        })}
       </div>
 
       {picked === null && (
-        <>
-          <p className="font-hand text-sm text-center text-muted-foreground">
-            Click the dot that doesn't fit with the others.
-          </p>
-          <div className="text-center">
-            <button
-              onClick={() => setShowHint((s) => !s)}
-              className="font-hand text-xs underline text-muted-foreground"
-            >
-              {showHint ? "hide hint" : "need a hint?"}
-            </button>
-            {showHint && (
-              <p className="font-hand text-xs italic text-muted-foreground mt-1">
-                {r.hint}
-              </p>
-            )}
-          </div>
-        </>
+        <div className="text-center">
+          <button
+            onClick={() => setShowHint((s) => !s)}
+            className="font-hand text-xs underline text-muted-foreground"
+          >
+            {showHint ? "hide hint" : "need a hint?"}
+          </button>
+          {showHint && (
+            <p className="font-hand text-xs italic text-muted-foreground mt-1">
+              {r.hint}
+            </p>
+          )}
+        </div>
       )}
 
       {picked !== null && (
@@ -239,158 +192,90 @@ function SpotTab() {
           style={{ background: isCorrect ? "#e8fff5" : "#ffe8e8" }}
         >
           <p className="font-hand text-base font-bold text-foreground">
-            {isCorrect ? "Nice eye! 🎯" : "Not quite — the red dot is the odd one."}
+            {isCorrect
+              ? "Nice eye! That value is the one the box plot flagged."
+              : `Not quite — the real outlier is ${r.realOutliers.join(", ")}. See the dot floating outside the whiskers?`}
           </p>
           <p className="font-hand text-sm text-foreground">
-            That point is FAR away from all the others. We call it an{" "}
-            <b>outlier</b> — a value that doesn't fit the usual pattern.
+            That point is FAR from the middle of the data. We call it an{" "}
+            <b>outlier</b> — a value that doesn&apos;t fit the usual pattern.
           </p>
-          <button onClick={handleNext} className="btn-sketchy font-hand text-sm" style={{ background: YELLOW }}>
+          <button
+            onClick={handleNext}
+            className="btn-sketchy font-hand text-sm"
+            style={{ background: YELLOW }}
+          >
             Next round →
           </button>
         </div>
       )}
 
       <InfoBox variant="blue">
-        An <b>outlier</b> is a data point that's very different from the rest.
-        Sometimes it's a mistake — sometimes it's the most interesting thing in
-        your data!
+        An <b>outlier</b> is a data point that&apos;s very different from
+        the rest. Sometimes it&apos;s a mistake — sometimes it&apos;s the
+        most interesting thing in your data!
       </InfoBox>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2 – How outliers PULL the average                              */
+/*  Tab 2 – How outliers PULL the average (Histogram + slider)         */
 /* ------------------------------------------------------------------ */
 
-const BASE_VALUES = [4, 5, 6, 5, 6, 5, 4, 6, 5];
+const BASE_VALUES = [4, 5, 6, 5, 6, 5, 4, 6, 5, 5, 6, 4, 5, 6, 5];
 
 function PullTab() {
   const [outlier, setOutlier] = useState(50);
   const [included, setIncluded] = useState(true);
 
-  const values = included ? [...BASE_VALUES, outlier] : BASE_VALUES;
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const values = useMemo(
+    () => (included ? [...BASE_VALUES, outlier] : BASE_VALUES),
+    [included, outlier],
+  );
 
-  // Map values onto a number line 0..60
-  const NL_W = 380;
-  const NL_PAD = 30;
-  const xFor = (v: number) => NL_PAD + (v / 60) * (NL_W - NL_PAD * 2);
+  const mean = useMemo(
+    () => values.reduce((a, b) => a + b, 0) / values.length,
+    [values],
+  );
+  const sorted = useMemo(() => [...values].sort((a, b) => a - b), [values]);
+  const median = useMemo(() => {
+    const n = sorted.length;
+    return n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)];
+  }, [sorted]);
 
   return (
     <div className="space-y-5">
+      <RikuSays>
+        Watch what happens to the <b>average</b> when one weird value
+        sneaks in. The mean line (coral) gets dragged toward the outlier.
+        The median line (lavender) barely budges — that&apos;s its
+        superpower.
+      </RikuSays>
+
       <p className="font-hand text-base text-foreground text-center">
-        Watch what happens to the <b>average</b> when one weird value sneaks in.
+        Slide the outlier — see the histogram&apos;s mean line shift.
       </p>
 
-      <div className="card-sketchy notebook-grid p-4" style={{ background: PAPER }}>
-        <svg width="100%" viewBox={`0 0 ${NL_W} 150`} style={{ maxHeight: 200 }}>
-          <defs>
-            <radialGradient id="pull-sky" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#94caff" />
-              <stop offset="100%" stopColor={SKY} />
-            </radialGradient>
-            <radialGradient id="pull-coral" cx="35%" cy="30%">
-              <stop offset="0%" stopColor="#ff9b9b" />
-              <stop offset="100%" stopColor={CORAL} />
-            </radialGradient>
-          </defs>
-          {/* Number line */}
-          <line
-            x1={NL_PAD}
-            y1="100"
-            x2={NL_W - NL_PAD}
-            y2="100"
-            stroke={INK}
-            strokeWidth="2"
-          />
-          {[0, 10, 20, 30, 40, 50, 60].map((t) => (
-            <g key={t}>
-              <line
-                x1={xFor(t)}
-                y1="95"
-                x2={xFor(t)}
-                y2="105"
-                stroke={INK}
-                strokeWidth="1.5"
-              />
-              <text
-                x={xFor(t)}
-                y="120"
-                textAnchor="middle"
-                fill={INK}
-                opacity="0.6"
-                style={{ fontFamily: "Patrick Hand, cursive", fontSize: 11 }}
-              >
-                {t}
-              </text>
-            </g>
-          ))}
-
-          {/* Normal points */}
-          {BASE_VALUES.map((v, i) => (
-            <circle
-              key={`v${i}`}
-              cx={xFor(v) + (i % 3 - 1) * 2}
-              cy={85 - (i % 3) * 6}
-              r="6"
-              fill="url(#pull-sky)"
-              stroke={INK}
-              strokeWidth="2"
-              style={{ filter: "drop-shadow(1px 1px 0 #2b2a35)" }}
-            />
-          ))}
-
-          {/* Outlier */}
-          {included && (
-            <circle
-              cx={xFor(outlier)}
-              cy={85}
-              r="9"
-              fill="url(#pull-coral)"
-              stroke={INK}
-              strokeWidth="2"
-              className="pulse-glow"
-              style={{ transition: "cx 0.3s ease", color: CORAL, filter: "drop-shadow(1.5px 1.5px 0 #2b2a35)" }}
-            />
-          )}
-
-          {/* Mean marker */}
-          <g style={{ transition: "transform 0.4s ease" }}>
-            <line
-              x1={xFor(mean)}
-              y1="40"
-              x2={xFor(mean)}
-              y2="100"
-              stroke={YELLOW}
-              strokeWidth="3"
-              strokeDasharray="4 3"
-            />
-            <polygon
-              points={`${xFor(mean) - 7},35 ${xFor(mean) + 7},35 ${xFor(mean)},45`}
-              fill={YELLOW}
-              stroke={INK}
-              strokeWidth="2"
-            />
-            <text
-              x={xFor(mean)}
-              y="28"
-              textAnchor="middle"
-              fill={INK}
-              style={{
-                fontFamily: "Kalam, cursive",
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              avg = {mean.toFixed(1)}
-            </text>
-          </g>
-        </svg>
+      <div
+        className="card-sketchy notebook-grid p-4"
+        style={{ background: PAPER }}
+      >
+        <Histogram
+          data={values}
+          width={520}
+          height={280}
+          bins={12}
+          showMean
+          showMedian
+          color={SKY}
+          xLabel="value"
+          yLabel="count"
+        />
       </div>
 
-      {/* Outlier slider */}
       <div className="card-sketchy p-4 space-y-3" style={{ background: "#fff8e7" }}>
         <div className="flex items-center justify-between">
           <span className="font-hand text-sm font-bold text-foreground">
@@ -411,17 +296,31 @@ function PullTab() {
           onChange={(e) => setOutlier(Number(e.target.value))}
           className="w-full"
           disabled={!included}
+          style={{ accentColor: "#ff6b6b" }}
         />
+        <div className="flex justify-between text-xs font-hand text-foreground">
+          <span>
+            Mean: <b style={{ color: CORAL }}>{mean.toFixed(2)}</b>
+          </span>
+          <span>
+            Median: <b style={{ color: "var(--accent-lav)" }}>{median.toFixed(2)}</b>
+          </span>
+        </div>
         <p className="font-hand text-xs text-muted-foreground">
-          Drag the slider — watch the yellow average arrow get DRAGGED toward
-          the outlier.
+          Drag the slider — the coral mean line drifts way more than the
+          lavender median line.
         </p>
       </div>
 
+      <RikuSays>
+        Rule of thumb: if your data has outliers you can&apos;t remove,
+        use the <b>median</b> instead of the mean. It doesn&apos;t flinch.
+      </RikuSays>
+
       <InfoBox variant="amber">
-        See how one weird value can drag the average way off? That's why
-        scientists check for outliers BEFORE calculating averages — they can
-        completely lie about your data.
+        See how one weird value can drag the average way off? That&apos;s
+        why scientists check for outliers BEFORE calculating averages —
+        they can completely lie about your data.
       </InfoBox>
     </div>
   );
@@ -431,13 +330,29 @@ function PullTab() {
 /*  Tab 3 – Real-world outlier stories                                 */
 /* ------------------------------------------------------------------ */
 
-const STORIES = [
+const STORIES: {
+  title: string;
+  color: string;
+  icon: string;
+  text: string;
+  lesson: string;
+  // Tiny illustrative scatter for this story.
+  scatter: DataPoint[];
+}[] = [
   {
     title: "The Lucky Lottery",
     color: YELLOW,
     icon: "🎟️",
     text: "If 1,000 people make $50,000 a year and one person wins $10 million in the lottery, the AVERAGE income jumps to $60,000 — even though nothing changed for 999 of them.",
     lesson: "Outliers can make averages misleading.",
+    scatter: [
+      ...Array.from({ length: 12 }, (_, i) => ({
+        x: i + 1,
+        y: 48 + ((i * 7) % 5),
+        category: "normal",
+      })),
+      { x: 13, y: 95, category: "outlier" },
+    ],
   },
   {
     title: "The Broken Sensor",
@@ -445,6 +360,15 @@ const STORIES = [
     icon: "🌡️",
     text: "A weather station reports temperatures: 22°C, 23°C, 21°C, 22°C, then suddenly 850°C! That last one is a sensor error, not a real temperature.",
     lesson: "Sometimes outliers are mistakes you should remove.",
+    scatter: [
+      { x: 1, y: 22, category: "normal" },
+      { x: 2, y: 23, category: "normal" },
+      { x: 3, y: 21, category: "normal" },
+      { x: 4, y: 22, category: "normal" },
+      { x: 5, y: 24, category: "normal" },
+      { x: 6, y: 22, category: "normal" },
+      { x: 7, y: 98, category: "outlier" },
+    ],
   },
   {
     title: "The Genius Discovery",
@@ -452,6 +376,14 @@ const STORIES = [
     icon: "💡",
     text: "Most stars in a galaxy have similar brightness. But ONE star pulsing in a weird way turned out to be the first known black hole.",
     lesson: "Sometimes outliers are the most exciting find!",
+    scatter: [
+      ...Array.from({ length: 14 }, (_, i) => ({
+        x: i + 1,
+        y: 40 + ((i * 5) % 8),
+        category: "normal",
+      })),
+      { x: 15, y: 92, category: "outlier" },
+    ],
   },
   {
     title: "The Olympic Athlete",
@@ -459,36 +391,56 @@ const STORIES = [
     icon: "🏃",
     text: "Most people run 100m in 14-18 seconds. Usain Bolt ran it in 9.58 seconds. He's a real outlier — and he holds the world record.",
     lesson: "Outliers show us the limits of what's possible.",
+    scatter: [
+      ...Array.from({ length: 12 }, (_, i) => ({
+        x: i + 1,
+        y: 14 + ((i * 3) % 4),
+        category: "normal",
+      })),
+      { x: 13, y: 9.58, category: "outlier" },
+    ],
   },
 ];
 
 function StoriesTab() {
   const [open, setOpen] = useState(0);
+  const story = STORIES[open];
   return (
     <div className="space-y-4">
+      <RikuSays>
+        Outliers aren&apos;t always bad. Sometimes they&apos;re the most
+        interesting thing in the whole dataset. Pick a story — see the
+        coral dot in each one?
+      </RikuSays>
+
       <p className="font-hand text-base text-foreground text-center">
-        Outliers aren't always bad. Sometimes they're the most interesting thing!
+        Outliers aren&apos;t always bad. Sometimes they&apos;re the most
+        interesting thing!
       </p>
+
       <div className="grid gap-3 sm:grid-cols-2">
         {STORIES.map((s, i) => (
           <button
             key={s.title}
-            onClick={() => setOpen(i)}
+            onClick={() => {
+              playClick();
+              setOpen(i);
+            }}
             className="card-sketchy p-4 text-left transition-transform hover:-translate-y-0.5"
             style={{
               background: open === i ? s.color + "33" : PAPER,
-              borderColor: open === i ? INK : undefined,
             }}
           >
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">{s.icon}</span>
-              <span className="font-hand font-bold text-foreground">{s.title}</span>
+              <span className="font-hand font-bold text-foreground">
+                {s.title}
+              </span>
             </div>
             <p className="font-hand text-sm text-foreground">{s.text}</p>
             {open === i && (
               <p
-                className="font-hand text-xs italic mt-2 pt-2 border-t-2 border-dashed border-foreground/30"
-                style={{ color: INK }}
+                className="font-hand text-xs italic mt-2 pt-2 border-t-2 border-dashed border-foreground/30 text-foreground"
               >
                 💭 {s.lesson}
               </p>
@@ -496,9 +448,34 @@ function StoriesTab() {
           </button>
         ))}
       </div>
+
+      <div
+        className="card-sketchy p-4"
+        style={{ background: PAPER }}
+      >
+        <p className="font-hand text-sm font-bold text-center text-foreground mb-2">
+          {story.title} — the coral dot is the outlier
+        </p>
+        <ScatterPlot
+          data={story.scatter}
+          width={520}
+          height={260}
+          xLabel="index"
+          yLabel="value"
+          categoryColors={{ normal: MINT, outlier: CORAL }}
+          pointRadius={7}
+        />
+      </div>
+
+      <RikuSays>
+        Before you delete an outlier, investigate it first. Typo? Delete.
+        Broken sensor? Delete. A discovery no one expected? <b>Keep it
+        and tell everyone.</b>
+      </RikuSays>
+
       <InfoBox variant="green">
-        Before deleting an outlier, ask: "Is this a mistake, or is this the most
-        important data point in my whole dataset?"
+        Before deleting an outlier, ask: &quot;Is this a mistake, or is
+        this the most important data point in my whole dataset?&quot;
       </InfoBox>
     </div>
   );
@@ -579,7 +556,7 @@ export default function L31_OutliersActivity() {
         content: <StoriesTab />,
       },
     ],
-    []
+    [],
   );
 
   return (

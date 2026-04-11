@@ -1,315 +1,126 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
-import { Grid3X3, ZoomIn, Palette, Eraser, Heart } from "lucide-react";
-
-const THEMES = [
-  { name: "Coral",    node: "#ff6b6b", glow: "#ff8a8a", accent: "#ffd93d" },
-  { name: "Mint",     node: "#4ecdc4", glow: "#7ee0d8", accent: "#ffd93d" },
-  { name: "Lavender", node: "#b18cf2", glow: "#c9adf7", accent: "#ffd93d" },
-  { name: "Sky",      node: "#6bb6ff", glow: "#94caff", accent: "#ffd93d" },
-  { name: "Sunset",   node: "#ffb88c", glow: "#ffd0b3", accent: "#ff6b6b" },
-];
+import { useMemo, useState } from "react";
+import { Grid3X3, BarChart3, Palette } from "lucide-react";
 import LessonShell from "../../components/LessonShell";
 import InfoBox from "../../components/InfoBox";
 import StorySection from "../../components/StorySection";
-import { playClick, playPop, playSuccess } from "../../utils/sounds";
+import { playClick } from "../../utils/sounds";
+import { ImageGrid, DEMO_IMAGES } from "@/components/viz/cnn";
+import type { Pixels2D } from "@/components/viz/cnn";
+import { Histogram } from "@/components/viz/data-viz";
 
 /* ------------------------------------------------------------------ */
-/*  Sketchy palette (matches L18 Perceptron)                           */
+/*  Riku (red panda) narrator bubble                                   */
 /* ------------------------------------------------------------------ */
-
-const INK = "#2b2a35";
-const CORAL = "#ff6b6b";
-const MINT = "#4ecdc4";
-const SKY = "#6bb6ff";
-const LAVENDER = "#b18cf2";
-const YELLOW = "#ffd93d";
-const PAPER = "#fffdf5";
-const CREAM = "#fff8e7";
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    const t0 = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    const t = (t0 + Math.imul(t0 ^ (t0 >>> 7), 61 | t0)) ^ t0;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+function RikuSays({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      className="card-sketchy p-3 flex gap-3 items-start"
+      style={{ background: "#fff8e7" }}
+    >
+      <span className="text-2xl" aria-hidden>
+        🐼
+      </span>
+      <p className="font-hand text-sm text-foreground leading-snug">
+        {children}
+      </p>
+    </div>
+  );
 }
 
-const BRIGHTNESS_LEVELS = [0, 64, 128, 192, 255];
-
-function grayToHex(v: number): string {
-  const h = v.toString(16).padStart(2, "0");
-  return `#${h}${h}${h}`;
+/* ------------------------------------------------------------------ */
+/*  Helpers — scale the 0..1 DEMO_IMAGES values into 0..255 so          */
+/*  students see the familiar "pixel brightness" number.                */
+/* ------------------------------------------------------------------ */
+function to255(img: Pixels2D): Pixels2D {
+  return img.map((row) => row.map((v) => Math.round(v * 255)));
 }
 
-function textColor(v: number): string {
-  return v > 128 ? INK : "#fff";
+function flat(img: Pixels2D): number[] {
+  const out: number[] = [];
+  for (const row of img) for (const v of row) out.push(v);
+  return out;
 }
 
-/* ---- preset pixel art ---- */
-const HEART: number[] = [
-  0,   192, 192, 0,   0,   192, 192, 0,
-  192, 255, 255, 192, 192, 255, 255, 192,
-  192, 255, 255, 255, 255, 255, 255, 192,
-  192, 255, 255, 255, 255, 255, 255, 192,
-  0,   192, 255, 255, 255, 255, 192, 0,
-  0,   0,   192, 255, 255, 192, 0,   0,
-  0,   0,   0,   192, 192, 0,   0,   0,
-  0,   0,   0,   0,   0,   0,   0,   0,
-];
-
-const SMILEY: number[] = [
-  0,   0,   192, 192, 192, 192, 0,   0,
-  0,   192, 255, 255, 255, 255, 192, 0,
-  192, 255, 64,  255, 255, 64,  255, 192,
-  192, 255, 255, 255, 255, 255, 255, 192,
-  192, 255, 64,  255, 255, 64,  255, 192,
-  192, 255, 255, 64,  64,  255, 255, 192,
-  0,   192, 255, 255, 255, 255, 192, 0,
-  0,   0,   192, 192, 192, 192, 0,   0,
-];
-
-const COLOR_IMAGE: number[][] = (() => {
-  const rand = mulberry32(123);
-  const r: number[][] = [];
-  for (let i = 0; i < 64; i++) {
-    const red = Math.floor(rand() * 200 + 55);
-    const green = Math.floor(rand() * 200 + 55);
-    const blue = Math.floor(rand() * 200 + 55);
-    r.push([red, green, blue]);
-  }
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const idx = row * 8 + col;
-      r[idx][0] = Math.min(255, Math.floor(row * 36));
-      r[idx][1] = Math.min(255, Math.floor(col * 36));
-      r[idx][2] = Math.min(255, Math.floor((7 - row) * 36));
-    }
-  }
-  return r;
-})();
+const DIGIT3_255 = to255(DEMO_IMAGES.digit3);
+const SMILEY_255 = to255(DEMO_IMAGES.smiley);
+const LETTER_X_255 = to255(DEMO_IMAGES.letterX);
 
 /* ------------------------------------------------------------------ */
-/*  Tab 1 — Pixel Grid                                                 */
+/*  Tab 1 — Grayscale Grid of Numbers                                   */
 /* ------------------------------------------------------------------ */
 function PixelGridTab() {
-  const [grid, setGrid] = useState<number[]>(() => new Array(64).fill(0));
-  const [themeIdx, setThemeIdx] = useState(0);
-  const [hovered, setHovered] = useState<number | null>(null);
-  const [brightness, setBrightness] = useState(255);
-  const theme = THEMES[themeIdx];
+  const [which, setWhich] = useState<"digit3" | "smiley" | "letterX">("digit3");
+  const [showValues, setShowValues] = useState(true);
 
-  const handleCellClick = useCallback((idx: number) => {
-    playPop();
-    setGrid((prev) => {
-      const next = [...prev];
-      next[idx] = next[idx] === brightness ? 0 : brightness;
-      return next;
-    });
-  }, [brightness]);
+  const pixels =
+    which === "digit3"
+      ? DIGIT3_255
+      : which === "smiley"
+      ? SMILEY_255
+      : LETTER_X_255;
 
-  const handleClear = useCallback(() => {
-    playClick();
-    setGrid(new Array(64).fill(0));
-  }, []);
-
-  const handleHeart = useCallback(() => {
-    playSuccess();
-    setGrid([...HEART]);
-  }, []);
-
-  const handleSmiley = useCallback(() => {
-    playSuccess();
-    setGrid([...SMILEY]);
-  }, []);
-
-  const litCount = grid.filter((v) => v > 0).length;
-
-  const cellSize = 44;
-  const gap = 3;
-  const totalSvgSize = cellSize * 8 + gap * 9;
+  const H = pixels.length;
+  const W = pixels[0]?.length ?? 0;
+  const litCount = flat(pixels).filter((v) => v > 0).length;
 
   return (
     <div className="space-y-5">
-      {/* Intro card */}
-      <div className="card-sketchy p-4" style={{ background: CREAM }}>
-        <p className="font-hand text-base text-foreground">
-          🎨 <b>Click any cell</b> to paint it with the current brightness.
-          Paint a shape and watch the same picture appear as a grid of numbers on the right!
-        </p>
-      </div>
+      <RikuSays>
+        An image is just numbers in a grid. Each number tells you how bright
+        that pixel is. That&apos;s it. Mind blown, right?
+      </RikuSays>
 
-      {/* Toolbar: theme + brightness */}
       <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-3">
-        <div className="flex items-center gap-2">
-          <Palette className="w-4 h-4 text-foreground/60" />
-          <span className="font-hand text-sm font-bold">Theme:</span>
-          <div className="flex gap-1.5">
-            {THEMES.map((t, i) => (
-              <button key={t.name} onClick={() => { playClick(); setThemeIdx(i); }} title={t.name}
-                className={`w-6 h-6 rounded-full border-2 transition-transform ${themeIdx === i ? "scale-125 border-foreground" : "border-foreground/30"}`}
-                style={{ background: t.node }} />
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="font-hand text-sm font-bold">Brightness:</span>
-          <input type="range" min={0} max={255} step={1} value={brightness}
-            onChange={(e) => setBrightness(parseInt(e.target.value))}
-            className="w-32 accent-accent-coral" />
-          <span className="font-hand text-sm font-bold px-2 py-0.5 rounded border-2 border-foreground"
-            style={{ background: grayToHex(brightness), color: textColor(brightness) }}>
-            {brightness}
-          </span>
-        </div>
-      </div>
-
-      {/* Grids side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Visual grid */}
-        <div className="card-sketchy p-4 notebook-grid">
-          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center mb-2">
-            Picture
-          </p>
-          <svg
-            viewBox={`0 0 ${totalSvgSize} ${totalSvgSize}`}
-            className="w-full max-w-[340px] mx-auto rounded-lg"
-            style={{ background: INK, padding: 0 }}
+        <span className="font-hand text-sm font-bold">Pick an image:</span>
+        {(
+          [
+            ["digit3", "3"],
+            ["smiley", "smiley"],
+            ["letterX", "letter X"],
+          ] as const
+        ).map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => {
+              playClick();
+              setWhich(k);
+            }}
+            className={
+              which === k ? "btn-sketchy" : "btn-sketchy-outline"
+            }
           >
-            <defs>
-              <radialGradient id="px-glow" cx="50%" cy="50%">
-                <stop offset="0%" stopColor={theme.glow} stopOpacity={0.85} />
-                <stop offset="100%" stopColor={theme.node} stopOpacity={0} />
-              </radialGradient>
-            </defs>
-            {grid.map((val, idx) => {
-              const row = Math.floor(idx / 8);
-              const col = idx % 8;
-              const x = gap + col * (cellSize + gap);
-              const y = gap + row * (cellSize + gap);
-              const isHovered = hovered === idx;
-              return (
-                <g key={idx}
-                  onClick={() => handleCellClick(idx)}
-                  onMouseEnter={() => setHovered(idx)}
-                  onMouseLeave={() => setHovered(null)}
-                  className="cursor-pointer">
-                  <rect
-                    x={x}
-                    y={y}
-                    width={cellSize}
-                    height={cellSize}
-                    fill={grayToHex(val)}
-                    stroke={isHovered ? theme.accent : INK}
-                    strokeWidth={isHovered ? 2.5 : 1}
-                    rx={4}
-                    className={isHovered ? "pulse-glow" : ""}
-                    style={isHovered ? { color: theme.node } : undefined}
-                  />
-                  {isHovered && (
-                    <rect x={x} y={y} width={cellSize} height={cellSize} fill="url(#px-glow)" rx={4} pointerEvents="none" />
-                  )}
-                  <text
-                    x={x + cellSize / 2}
-                    y={y + cellSize / 2 + 4}
-                    textAnchor="middle"
-                    fill={textColor(val)}
-                    fontFamily="Kalam"
-                    className="text-[12px] font-bold pointer-events-none"
-                  >
-                    {val}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
-
-        {/* Number grid */}
-        <div className="card-sketchy p-4" style={{ background: PAPER }}>
-          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center mb-2">
-            What the computer sees
-          </p>
-          <div className="overflow-x-auto">
-            <table className="border-collapse mx-auto" style={{ fontFamily: "Kalam" }}>
-              <tbody>
-                {Array.from({ length: 8 }, (_, row) => (
-                  <tr key={row}>
-                    {Array.from({ length: 8 }, (_, col) => {
-                      const v = grid[row * 8 + col];
-                      return (
-                        <td
-                          key={col}
-                          className="text-center text-xs font-bold w-9 h-9 border-2"
-                          style={{
-                            borderColor: INK,
-                            background: `rgba(43, 42, 53, ${(v / 255) * 0.85})`,
-                            color: v > 128 ? "#fff" : INK,
-                          }}
-                        >
-                          {v}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="font-hand text-xs text-center text-muted-foreground mt-3">
-            Lit pixels: <span className="font-bold text-foreground">{litCount}</span> / 64
-          </p>
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      <div className="flex gap-2 justify-center flex-wrap">
+            {label}
+          </button>
+        ))}
         <button
-          onClick={handleHeart}
-          className="btn-sketchy font-hand text-sm"
-          style={{ background: CORAL, color: "#fff" }}
+          type="button"
+          onClick={() => {
+            playClick();
+            setShowValues((s) => !s);
+          }}
+          className="btn-sketchy-outline"
         >
-          <Heart className="w-4 h-4" />
-          Load Heart
-        </button>
-        <button
-          onClick={handleSmiley}
-          className="btn-sketchy font-hand text-sm"
-          style={{ background: YELLOW }}
-        >
-          😊 Load Smiley
-        </button>
-        <button onClick={handleClear} className="btn-sketchy-outline font-hand text-sm">
-          <Eraser className="w-4 h-4" />
-          Clear
+          {showValues ? "hide numbers" : "show numbers"}
         </button>
       </div>
 
-      {/* Brightness legend */}
-      <div className="card-sketchy p-3" style={{ background: PAPER }}>
-        <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center mb-2">
-          Brightness Scale
+      <div className="card-sketchy p-4 notebook-grid flex flex-col items-center gap-3">
+        <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center">
+          {W}×{H} pixel grid — every cell is a single number (0 = black, 255 = white)
         </p>
-        <div className="flex justify-center items-center gap-2 flex-wrap">
-          {BRIGHTNESS_LEVELS.map((v) => (
-            <div key={v} className="flex flex-col items-center">
-              <div
-                className="w-10 h-10 rounded-md border-2"
-                style={{ background: grayToHex(v), borderColor: INK }}
-              />
-              <span className="font-hand text-xs font-bold mt-1" style={{ color: INK }}>
-                {v}
-              </span>
-            </div>
-          ))}
-        </div>
+        <ImageGrid
+          pixels={pixels}
+          cellSize={showValues ? 42 : 30}
+          showValues={showValues}
+          colormap="gray"
+          valueRange={[0, 255]}
+        />
+        <p className="font-hand text-xs text-center text-muted-foreground">
+          lit pixels: <span className="font-bold text-foreground">{litCount}</span> / {W * H}
+        </p>
       </div>
 
       <InfoBox variant="blue">
@@ -323,129 +134,118 @@ function PixelGridTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 2 — Zoom Into Pixels                                           */
+/*  Tab 2 — Brightness = Number (pixel histogram)                       */
 /* ------------------------------------------------------------------ */
-function ZoomTab() {
-  const [zoom, setZoom] = useState(0);
-  const [whichImage, setWhichImage] = useState<"heart" | "smiley">("heart");
-  const image = whichImage === "heart" ? HEART : SMILEY;
-  const cellSize = 44;
-  const gap = 3;
-  const svgSize = cellSize * 8 + gap * 9;
+function BrightnessTab() {
+  const [which, setWhich] = useState<"digit3" | "smiley" | "letterX">("smiley");
 
-  const pixelOpacity = 1 - zoom;
-  const numberOpacity = zoom < 0.5 ? 1 : Math.max(0, 1 - (zoom - 0.5) * 2);
-  const borderRadius = Math.round(zoom * 20);
+  const pixels =
+    which === "digit3"
+      ? DIGIT3_255
+      : which === "smiley"
+      ? SMILEY_255
+      : LETTER_X_255;
+
+  const values = useMemo(() => flat(pixels), [pixels]);
+  const mean =
+    values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+  const dark = values.filter((v) => v < 85).length;
+  const mid = values.filter((v) => v >= 85 && v < 170).length;
+  const bright = values.filter((v) => v >= 170).length;
 
   return (
     <div className="space-y-5">
-      <div className="card-sketchy p-4" style={{ background: CREAM }}>
-        <p className="font-hand text-base text-foreground">
-          🔍 Drag the slider to <b>zoom out</b> from raw pixels to a smooth picture. Notice how
-          your eye stitches the squares together.
-        </p>
-      </div>
+      <RikuSays>
+        Here&apos;s the wild part: the only thing that changes a pixel is a
+        number between 0 and 255. Low number = dark, high number = bright. Now
+        count how many pixels sit at each brightness and you get a histogram.
+      </RikuSays>
 
-      {/* Image picker */}
-      <div className="flex justify-center gap-2">
-        {(["heart", "smiley"] as const).map((k) => (
+      <div className="card-sketchy p-3 flex flex-wrap items-center justify-center gap-3">
+        <span className="font-hand text-sm font-bold">Image:</span>
+        {(
+          [
+            ["smiley", "smiley"],
+            ["digit3", "3"],
+            ["letterX", "letter X"],
+          ] as const
+        ).map(([k, label]) => (
           <button
             key={k}
+            type="button"
             onClick={() => {
               playClick();
-              setWhichImage(k);
+              setWhich(k);
             }}
-            className="btn-sketchy font-hand text-xs"
-            style={
-              whichImage === k
-                ? { background: k === "heart" ? CORAL : YELLOW, color: k === "heart" ? "#fff" : INK }
-                : undefined
+            className={
+              which === k ? "btn-sketchy" : "btn-sketchy-outline"
             }
           >
-            {k === "heart" ? "❤️ Heart" : "😊 Smiley"}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* SVG canvas */}
-      <div className="card-sketchy p-4 notebook-grid">
-        <svg
-          viewBox={`0 0 ${svgSize} ${svgSize}`}
-          className="w-full max-w-[360px] mx-auto rounded-lg"
-          style={{ background: INK }}
-        >
-          {image.map((val, idx) => {
-            const row = Math.floor(idx / 8);
-            const col = idx % 8;
-            const x = gap + col * (cellSize + gap);
-            const y = gap + row * (cellSize + gap);
-            const gapDisplay = gap * (1 - zoom * 0.9);
-            const sizeDisplay = cellSize + (gap - gapDisplay);
-            const xDisplay = gapDisplay + col * (sizeDisplay + gapDisplay);
-            const yDisplay = gapDisplay + row * (sizeDisplay + gapDisplay);
-            return (
-              <g key={idx}>
-                <rect
-                  x={xDisplay}
-                  y={yDisplay}
-                  width={sizeDisplay}
-                  height={sizeDisplay}
-                  fill={grayToHex(val)}
-                  rx={borderRadius}
-                  opacity={pixelOpacity > 0.3 ? 1 : 0.3 + pixelOpacity}
-                />
-                {numberOpacity > 0.05 && (
-                  <text
-                    x={x + cellSize / 2}
-                    y={y + cellSize / 2 + 4}
-                    textAnchor="middle"
-                    fill={textColor(val)}
-                    fontFamily="Kalam"
-                    className="text-[12px] font-bold pointer-events-none"
-                    opacity={numberOpacity}
-                  >
-                    {val}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+      <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-4 items-start">
+        <div className="card-sketchy p-4 flex flex-col items-center gap-2 notebook-grid">
+          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center">
+            the image
+          </p>
+          <ImageGrid
+            pixels={pixels}
+            cellSize={24}
+            colormap="gray"
+            valueRange={[0, 255]}
+          />
+        </div>
+
+        <div className="card-sketchy p-4">
+          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center mb-2">
+            distribution of pixel brightness
+          </p>
+          <Histogram
+            data={values}
+            bins={8}
+            width={460}
+            height={260}
+            xLabel="pixel value (0-255)"
+            yLabel="# of pixels"
+            color="var(--accent-sky)"
+          />
+        </div>
       </div>
 
-      {/* Slider */}
-      <div className="card-sketchy p-4" style={{ background: PAPER }}>
-        <div className="flex items-center gap-3 justify-center flex-wrap">
-          <span className="font-hand text-sm font-bold" style={{ color: CORAL }}>
-            Pixelated
-          </span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={zoom}
-            onChange={(e) => {
-              playPop();
-              setZoom(Number(e.target.value));
-            }}
-            className="w-56"
-            style={{ accentColor: LAVENDER }}
-          />
-          <span className="font-hand text-sm font-bold" style={{ color: MINT }}>
-            Smooth
-          </span>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="card-sketchy p-3 text-center">
+          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground">
+            dark (0-84)
+          </p>
+          <p className="font-hand text-2xl font-bold">{dark}</p>
         </div>
-        <p className="font-hand text-xs text-center text-muted-foreground mt-2">
-          Zoom: <span className="font-bold text-foreground">{Math.round(zoom * 100)}%</span>
-        </p>
+        <div className="card-sketchy p-3 text-center">
+          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground">
+            mid (85-169)
+          </p>
+          <p className="font-hand text-2xl font-bold">{mid}</p>
+        </div>
+        <div className="card-sketchy p-3 text-center">
+          <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground">
+            bright (170-255)
+          </p>
+          <p className="font-hand text-2xl font-bold">{bright}</p>
+        </div>
       </div>
+
+      <p className="font-hand text-sm text-center text-muted-foreground">
+        average brightness:{" "}
+        <span className="font-bold text-foreground">{mean.toFixed(1)}</span>
+      </p>
 
       <InfoBox variant="amber">
         <span className="font-hand text-base">
-          🔬 No matter how smooth a photo looks, zoom in far enough and you'll always find tiny
-          square pixels — each one just a number. High-resolution images simply have millions of
-          these tiny squares.
+          🔬 Every brightness value is just a number between 0 and 255. The
+          histogram counts how many pixels sit in each bucket — a quick
+          fingerprint of the whole image.
         </span>
       </InfoBox>
     </div>
@@ -453,100 +253,79 @@ function ZoomTab() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Tab 3 — Color Channels                                             */
+/*  Tab 3 — Color = 3 Grids (R, G, B)                                   */
 /* ------------------------------------------------------------------ */
 function ColorChannelsTab() {
+  // Build a synthetic little 8x8 "color card" — three separate channel grids.
+  // Each channel is its own Pixels2D, 0..255.
+  const rChannel: Pixels2D = useMemo(() => {
+    const out: Pixels2D = [];
+    for (let y = 0; y < 8; y++) {
+      const row: number[] = [];
+      for (let x = 0; x < 8; x++) row.push(Math.round((x / 7) * 255));
+      out.push(row);
+    }
+    return out;
+  }, []);
+
+  const gChannel: Pixels2D = useMemo(() => {
+    const out: Pixels2D = [];
+    for (let y = 0; y < 8; y++) {
+      const row: number[] = [];
+      for (let x = 0; x < 8; x++) row.push(Math.round((y / 7) * 255));
+      out.push(row);
+    }
+    return out;
+  }, []);
+
+  const bChannel: Pixels2D = useMemo(() => {
+    const out: Pixels2D = [];
+    for (let y = 0; y < 8; y++) {
+      const row: number[] = [];
+      for (let x = 0; x < 8; x++)
+        row.push(Math.round((((7 - y) + (7 - x)) / 14) * 255));
+      out.push(row);
+    }
+    return out;
+  }, []);
+
   const [showR, setShowR] = useState(true);
   const [showG, setShowG] = useState(true);
   const [showB, setShowB] = useState(true);
-  const [adjustChannel, setAdjustChannel] = useState<"r" | "g" | "b">("r");
-  const [adjustment, setAdjustment] = useState(0);
 
-  const image = useMemo(() => {
-    return COLOR_IMAGE.map(([r, g, b]) => {
-      const ar = adjustChannel === "r" ? Math.min(255, Math.max(0, r + adjustment)) : r;
-      const ag = adjustChannel === "g" ? Math.min(255, Math.max(0, g + adjustment)) : g;
-      const ab = adjustChannel === "b" ? Math.min(255, Math.max(0, b + adjustment)) : b;
-      return [ar, ag, ab];
-    });
-  }, [adjustChannel, adjustment]);
-
-  const cellSize = 30;
+  const cellSize = 22;
   const gap = 2;
-  const gridSize = cellSize * 8 + gap * 9;
-
-  const renderChannelGrid = (channel: 0 | 1 | 2, label: string, color: string) => (
-    <div className="card-sketchy p-2" style={{ background: PAPER }}>
-      <p className="font-hand text-xs font-bold text-center mb-1" style={{ color }}>
-        {label}
-      </p>
-      <svg
-        viewBox={`0 0 ${gridSize} ${gridSize}`}
-        className="w-full max-w-[140px] mx-auto rounded"
-        style={{ background: INK }}
-      >
-        {image.map((pixel, idx) => {
-          const row = Math.floor(idx / 8);
-          const col = idx % 8;
-          const x = gap + col * (cellSize + gap);
-          const y = gap + row * (cellSize + gap);
-          const val = pixel[channel];
-          const channelHex = val.toString(16).padStart(2, "0");
-          const fill =
-            channel === 0
-              ? `#${channelHex}0000`
-              : channel === 1
-              ? `#00${channelHex}00`
-              : `#0000${channelHex}`;
-          return (
-            <g key={idx}>
-              <rect x={x} y={y} width={cellSize} height={cellSize} fill={fill} rx={2} />
-              <text
-                x={x + cellSize / 2}
-                y={y + cellSize / 2 + 3}
-                textAnchor="middle"
-                fill="#fff"
-                fontFamily="Kalam"
-                className="text-[9px] font-bold pointer-events-none"
-              >
-                {val}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+  const svgSize = 8 * cellSize + gap * 9;
 
   return (
     <div className="space-y-5">
-      <div className="card-sketchy p-4" style={{ background: CREAM }}>
-        <p className="font-hand text-base text-foreground">
-          🌈 Every color pixel is <b>three numbers</b>: how much Red, Green, and Blue. Toggle
-          channels and slide the adjuster to see how they mix.
-        </p>
-      </div>
+      <RikuSays>
+        A color image isn&apos;t one grid — it&apos;s <b>three</b> grids stacked up. One for red,
+        one for green, one for blue. Each pixel becomes three numbers. Every
+        color on your screen is a recipe: &quot;this much red, this much green,
+        this much blue.&quot;
+      </RikuSays>
 
-      {/* Channel toggles */}
       <div className="flex gap-2 justify-center flex-wrap">
         {(
           [
-            ["Red", showR, setShowR, CORAL],
-            ["Green", showG, setShowG, MINT],
-            ["Blue", showB, setShowB, SKY],
+            ["Red", showR, setShowR, "var(--accent-coral)"],
+            ["Green", showG, setShowG, "var(--accent-mint)"],
+            ["Blue", showB, setShowB, "var(--accent-sky)"],
           ] as const
         ).map(([label, active, setter, bg]) => (
           <button
             key={label}
+            type="button"
             onClick={() => {
-              playPop();
+              playClick();
               (setter as (v: boolean) => void)(!active);
             }}
             className="btn-sketchy font-hand text-xs"
             style={
               active
                 ? { background: bg, color: "#fff" }
-                : { background: PAPER, color: INK, opacity: 0.55 }
+                : { opacity: 0.55 }
             }
           >
             {label}: {active ? "ON" : "OFF"}
@@ -554,101 +333,94 @@ function ColorChannelsTab() {
         ))}
       </div>
 
-      {/* Channel grids + combined */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 justify-items-center">
-        {renderChannelGrid(0, "Red", CORAL)}
-        {renderChannelGrid(1, "Green", MINT)}
-        {renderChannelGrid(2, "Blue", SKY)}
-        <div
-          className="card-sketchy p-2"
-          style={{ background: YELLOW + "33" }}
-        >
-          <p className="font-hand text-xs font-bold text-center mb-1" style={{ color: INK }}>
-            Combined
-          </p>
-          <svg
-            viewBox={`0 0 ${gridSize} ${gridSize}`}
-            className="w-full max-w-[140px] mx-auto rounded"
-            style={{ background: INK }}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="card-sketchy p-3 flex flex-col items-center">
+          <p
+            className="font-hand text-xs font-bold text-center mb-2"
+            style={{ color: "var(--accent-coral)" }}
           >
-            {image.map((pixel, idx) => {
-              const row = Math.floor(idx / 8);
-              const col = idx % 8;
-              const x = gap + col * (cellSize + gap);
-              const y = gap + row * (cellSize + gap);
-              const r = showR ? pixel[0] : 0;
-              const g = showG ? pixel[1] : 0;
-              const b = showB ? pixel[2] : 0;
+            RED channel
+          </p>
+          <ImageGrid
+            pixels={rChannel}
+            cellSize={22}
+            colormap="coral"
+            valueRange={[0, 255]}
+            showValues
+          />
+        </div>
+        <div className="card-sketchy p-3 flex flex-col items-center">
+          <p
+            className="font-hand text-xs font-bold text-center mb-2"
+            style={{ color: "var(--accent-mint)" }}
+          >
+            GREEN channel
+          </p>
+          <ImageGrid
+            pixels={gChannel}
+            cellSize={22}
+            colormap="mint"
+            valueRange={[0, 255]}
+            showValues
+          />
+        </div>
+        <div className="card-sketchy p-3 flex flex-col items-center">
+          <p
+            className="font-hand text-xs font-bold text-center mb-2"
+            style={{ color: "var(--accent-sky)" }}
+          >
+            BLUE channel
+          </p>
+          <ImageGrid
+            pixels={bChannel}
+            cellSize={22}
+            colormap="viridis"
+            valueRange={[0, 255]}
+            showValues
+          />
+        </div>
+      </div>
+
+      <div className="card-sketchy p-4 flex flex-col items-center">
+        <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center mb-2">
+          combined (R + G + B)
+        </p>
+        <svg
+          viewBox={`0 0 ${svgSize} ${svgSize}`}
+          className="w-full max-w-[220px] rounded-lg"
+          style={{ background: "#2b2a35" }}
+        >
+          {rChannel.map((row, y) =>
+            row.map((_, x) => {
+              const r = showR ? rChannel[y][x] : 0;
+              const g = showG ? gChannel[y][x] : 0;
+              const b = showB ? bChannel[y][x] : 0;
+              const cx = gap + x * (cellSize + gap);
+              const cy = gap + y * (cellSize + gap);
               return (
                 <rect
-                  key={idx}
-                  x={x}
-                  y={y}
+                  key={`c-${y}-${x}`}
+                  x={cx}
+                  y={cy}
                   width={cellSize}
                   height={cellSize}
                   fill={`rgb(${r},${g},${b})`}
                   rx={2}
                 />
               );
-            })}
-          </svg>
-        </div>
-      </div>
-
-      {/* Channel adjustment */}
-      <div className="card-sketchy p-4 space-y-3" style={{ background: PAPER }}>
-        <p className="font-hand text-xs uppercase tracking-wider font-bold text-muted-foreground text-center">
-          Tweak a channel
+            })
+          )}
+        </svg>
+        <p className="font-hand text-xs text-muted-foreground text-center mt-2">
+          mixing the three channels gives you every color your screen can show
         </p>
-        <div className="flex items-center gap-3 justify-center flex-wrap">
-          <span className="font-hand text-sm font-bold">Adjust:</span>
-          {(["r", "g", "b"] as const).map((ch) => {
-            const c = ch === "r" ? CORAL : ch === "g" ? MINT : SKY;
-            const active = adjustChannel === ch;
-            return (
-              <button
-                key={ch}
-                onClick={() => {
-                  playClick();
-                  setAdjustChannel(ch);
-                  setAdjustment(0);
-                }}
-                className="btn-sketchy font-hand text-xs"
-                style={active ? { background: c, color: "#fff" } : undefined}
-              >
-                {ch.toUpperCase()}
-              </button>
-            );
-          })}
-          <input
-            type="range"
-            min={-128}
-            max={128}
-            step={8}
-            value={adjustment}
-            onChange={(e) => {
-              playPop();
-              setAdjustment(Number(e.target.value));
-            }}
-            className="w-40"
-            style={{
-              accentColor:
-                adjustChannel === "r" ? CORAL : adjustChannel === "g" ? MINT : SKY,
-            }}
-          />
-          <span
-            className="font-hand text-sm font-bold px-2 py-0.5 rounded border-2 border-foreground"
-            style={{ background: YELLOW }}
-          >
-            {adjustment > 0 ? `+${adjustment}` : adjustment}
-          </span>
-        </div>
       </div>
 
       <InfoBox variant="green">
         <span className="font-hand text-base">
-          🎨 Every color on your screen is made by mixing just three colors. (255, 0, 0) is pure
-          red, (0, 255, 0) is pure green. Mix them all to get every color in the rainbow!
+          🎨 Color images use three numbers per pixel — one each for Red,
+          Green, Blue. (255, 0, 0) is pure red, (0, 255, 0) is pure green,
+          (255, 255, 0) mixes to yellow. Three grids, stacked.
         </span>
       </InfoBox>
     </div>
@@ -717,15 +489,15 @@ export default function L26_ImagesAsDataActivity() {
     () => [
       {
         id: "pixel-grid",
-        label: "Pixel Grid",
+        label: "Grid of Numbers",
         icon: <Grid3X3 className="w-4 h-4" />,
         content: <PixelGridTab />,
       },
       {
-        id: "zoom",
-        label: "Zoom Into Pixels",
-        icon: <ZoomIn className="w-4 h-4" />,
-        content: <ZoomTab />,
+        id: "brightness",
+        label: "Brightness = Number",
+        icon: <BarChart3 className="w-4 h-4" />,
+        content: <BrightnessTab />,
       },
       {
         id: "channels",
