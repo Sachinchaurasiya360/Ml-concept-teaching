@@ -1,363 +1,1823 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import Link from "next/link";
 import {
-  Brain,
-  Cpu,
-  Axis3D,
-  Sparkles,
+  BarChart3,
+  Network,
+  HardDrive,
+  Database,
+  Boxes,
+  GraduationCap,
+  Briefcase,
   Target,
-  Layers,
-  Zap,
-  TrendingDown,
-  ImageIcon,
-  ChevronRight,
-  Play,
   BookOpen,
+  Check,
+  ArrowRight,
+  Menu,
+  X,
+  Eye,
+  Gauge,
+  SlidersHorizontal,
+  Columns2,
+  ChevronRight,
+  BookOpenCheck,
   Users,
-  Star,
+  Award,
+  Sparkles,
 } from "lucide-react";
-import { playClick } from "../utils/sounds";
 
-const LEVEL_CARDS = [
+/* ================================================================== */
+/*  THEME — Light, clean, Skilly-inspired                              */
+/* ================================================================== */
+
+const T = {
+  bg: "#FFFFFF",
+  bgSoft: "#F8FAF9",
+  bgSection: "#F3F7F5",
+  primary: "#1DC071",
+  primaryDark: "#17A660",
+  primaryLight: "#E8F8F0",
+  primaryGlow: "rgba(29, 192, 113, 0.15)",
+  accent: "#FFB800",
+  accentLight: "#FFF4D6",
+  text: "#1A1D26",
+  textSecondary: "#5A6270",
+  textMuted: "#8E95A2",
+  border: "#E8ECF0",
+  borderLight: "#F0F3F5",
+  card: "#FFFFFF",
+  heading: "'Bricolage Grotesque', 'Outfit', sans-serif",
+  body: "'Outfit', system-ui, sans-serif",
+};
+
+/* ================================================================== */
+/*  PANDA LOGO                                                         */
+/* ================================================================== */
+
+function PandaLogo({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="7" r="4.5" fill="#F4A261" />
+      <circle cx="24" cy="7" r="4.5" fill="#F4A261" />
+      <circle cx="8" cy="7" r="2.2" fill="#2D1B0E" />
+      <circle cx="24" cy="7" r="2.2" fill="#2D1B0E" />
+      <ellipse cx="16" cy="18" rx="11.5" ry="11" fill="#E76F51" />
+      <ellipse cx="16" cy="21" rx="5.5" ry="4.5" fill="#FDEBD0" />
+      <ellipse cx="11" cy="15.5" rx="2.8" ry="2.5" fill="#6B2D0F" />
+      <ellipse cx="21" cy="15.5" rx="2.8" ry="2.5" fill="#6B2D0F" />
+      <circle cx="11" cy="15.2" r="1.2" fill="white" />
+      <circle cx="21" cy="15.2" r="1.2" fill="white" />
+      <circle cx="11.3" cy="15" r="0.6" fill="#1a1a2e" />
+      <circle cx="21.3" cy="15" r="0.6" fill="#1a1a2e" />
+      <ellipse cx="16" cy="19.2" rx="1.4" ry="1" fill="#2D1B0E" />
+    </svg>
+  );
+}
+
+/* ================================================================== */
+/*  DATA                                                               */
+/* ================================================================== */
+
+const ENGINEERING_SUBJECTS = [
   {
-    level: 1,
-    title: "What Are Machines & Data?",
-    desc: "Start from the very basics \u2014 what machines do, how computers think in 0s and 1s, and what data really means.",
-    icon: <Cpu className="w-6 h-6" />,
-    accent: "var(--accent-sky)",
-    lessons: 5,
-    path: "/level1/machines",
+    icon: BarChart3,
+    title: "Data Structures & Algorithms",
+    desc: "Arrays, trees, graphs, sorting, searching, and dynamic programming. Step-by-step visual tracing.",
+    levels: "7 Levels",
+    lessons: "35+ Lessons",
+    accent: "#E76F51",
+    accentBg: "rgba(231, 111, 81, 0.08)",
   },
   {
-    level: 2,
-    title: "Seeing Patterns in Data",
-    desc: "Learn to plot data on graphs, spot trends and clusters, and sort information like a computer.",
-    icon: <Axis3D className="w-6 h-6" />,
-    accent: "var(--accent-mint)",
-    lessons: 5,
-    path: "/level2/coordinates",
+    icon: Network,
+    title: "Computer Networks",
+    desc: "OSI layers, TCP/IP, routing algorithms, DNS, and HTTP. Animated packet flow simulations.",
+    levels: "6 Levels",
+    lessons: "30+ Lessons",
+    accent: "#3B82F6",
+    accentBg: "rgba(59, 130, 246, 0.08)",
   },
   {
-    level: 3,
-    title: "From Patterns to Predictions",
-    desc: "Make predictions from data, draw the best-fit line, and understand what algorithms are.",
-    icon: <Sparkles className="w-6 h-6" />,
-    accent: "var(--accent-lav)",
-    lessons: 6,
-    path: "/level3/predictions",
+    icon: HardDrive,
+    title: "Operating Systems",
+    desc: "Process scheduling, memory management, deadlocks, and file systems. Interactive Gantt charts and diagrams.",
+    levels: "6 Levels",
+    lessons: "28+ Lessons",
+    accent: "#1DC071",
+    accentBg: "rgba(29, 192, 113, 0.08)",
   },
   {
-    level: 4,
-    title: "Introduction to ML",
-    desc: "Dive into supervised learning, K-Nearest Neighbors, decision trees, and how to measure model success.",
-    icon: <Target className="w-6 h-6" />,
-    accent: "var(--accent-yellow)",
-    lessons: 6,
-    path: "/level4/supervised-learning",
+    icon: Database,
+    title: "Database Management",
+    desc: "SQL, normalization, transactions, indexing, and ER diagrams. Live query execution visualizations.",
+    levels: "6 Levels",
+    lessons: "28+ Lessons",
+    accent: "#FFB800",
+    accentBg: "rgba(255, 184, 0, 0.08)",
   },
   {
-    level: 5,
-    title: "Unsupervised Learning",
-    desc: "Discover how machines find hidden groups in data without labels using K-Means clustering.",
-    icon: <Layers className="w-6 h-6" />,
-    accent: "var(--accent-coral)",
-    lessons: 5,
-    path: "/level5/unsupervised-learning",
-  },
-  {
-    level: 6,
-    title: "Neural Networks",
-    desc: "Build neurons, stack them into layers, and learn how backpropagation teaches a network.",
-    icon: <Zap className="w-6 h-6" />,
-    accent: "var(--accent-sky)",
-    lessons: 6,
-    path: "/level6/perceptron",
-  },
-  {
-    level: 7,
-    title: "Training & Optimization",
-    desc: "Master gradient descent, learning rates, overfitting, and the difference between SGD and batch training.",
-    icon: <TrendingDown className="w-6 h-6" />,
-    accent: "var(--accent-coral)",
-    lessons: 4,
-    path: "/level7/gradient-descent",
-  },
-  {
-    level: 8,
-    title: "Computer Vision & CNNs",
-    desc: "See how computers see \u2014 pixels, filters, convolution, pooling, and build a mini CNN from scratch.",
-    icon: <ImageIcon className="w-6 h-6" />,
-    accent: "var(--accent-lav)",
-    lessons: 5,
-    path: "/level8/images-as-data",
+    icon: Boxes,
+    title: "Object-Oriented Programming",
+    desc: "Classes, inheritance, polymorphism, and design patterns. UML diagrams and interactive code walkthroughs.",
+    levels: "5 Levels",
+    lessons: "22+ Lessons",
+    accent: "#8B5CF6",
+    accentBg: "rgba(139, 92, 246, 0.08)",
   },
 ];
 
-const FEATURES = [
+const VIZ_FEATURES = [
   {
-    icon: <Play className="w-5 h-5" />,
-    title: "Interactive, Not Boring",
-    desc: "Every lesson has hands-on SVG activities \u2014 click, drag, and explore. No passive video lectures.",
-    accent: "var(--accent-coral)",
+    icon: Eye,
+    title: "Step-through Execution",
+    desc: "Line-by-line pseudocode tracing with the current line highlighted. See exactly what the algorithm does at each step.",
   },
   {
-    icon: <BookOpen className="w-5 h-5" />,
-    title: "Story-Driven",
-    desc: "Follow Aru and Riku the red panda as they discover AI through cricket, Netflix, and daily adventures.",
-    accent: "var(--accent-yellow)",
+    icon: Gauge,
+    title: "Speed Controls",
+    desc: "Slow-mo to instant execution. Pause, resume, and step through at your own pace.",
   },
   {
-    icon: <Users className="w-5 h-5" />,
-    title: "Made for Class 8\u201312",
-    desc: "Age-appropriate content across CBSE, ICSE, and State Boards. No coding or math prerequisites.",
-    accent: "var(--accent-mint)",
+    icon: SlidersHorizontal,
+    title: "Custom Input",
+    desc: "Try your own data and see the algorithm adapt in real-time. Experiment freely.",
   },
   {
-    icon: <Star className="w-5 h-5" />,
-    title: "Gamified Learning",
-    desc: "XP, streaks, badges, and leaderboards. Learning AI should feel like playing your favorite game.",
-    accent: "var(--accent-lav)",
+    icon: Columns2,
+    title: "Side-by-side Compare",
+    desc: "Compare Bubble Sort vs Merge Sort in real-time. See why one algorithm outperforms another.",
   },
 ];
 
-export default function LandingPage() {
-  const router = useRouter();
+const AUDIENCE = [
+  {
+    icon: GraduationCap,
+    title: "School Students (Class 8-12)",
+    desc: "AI/ML fundamentals with fun, story-driven lessons",
+    accent: "#1DC071",
+  },
+  {
+    icon: BookOpen,
+    title: "B.Tech CSE Students",
+    desc: "Core CS subjects with interactive visualizations",
+    accent: "#3B82F6",
+  },
+  {
+    icon: Target,
+    title: "GATE Aspirants",
+    desc: "Previous year papers, topic-wise tests",
+    accent: "#8B5CF6",
+  },
+  {
+    icon: Briefcase,
+    title: "Placement Seekers",
+    desc: "Company-specific prep, interview patterns",
+    accent: "#E76F51",
+  },
+];
+
+const PRICING_PLANS = [
+  {
+    name: "Free",
+    price: "₹0",
+    period: "forever",
+    subtitle: "Get started",
+    accent: "#1DC071",
+    features: [
+      "3 lessons per subject",
+      "Basic quizzes",
+      "Community access",
+      "Leaderboard (view only)",
+    ],
+    cta: "Start Free",
+    popular: false,
+  },
+  {
+    name: "Engineering",
+    price: "₹249",
+    period: "/month",
+    subtitle: "₹149/mo billed annually",
+    accent: "#3B82F6",
+    features: [
+      "Full Engineering track (DSA, CN, OS, DBMS, OOP)",
+      "GATE mock tests + previous year papers",
+      "Placement prep (company-specific)",
+      "Interactive visualizations",
+      "Certificates",
+      "Browser extension (Leetcode hints)",
+    ],
+    cta: "Start 2-Day Free Trial",
+    popular: true,
+  },
+  {
+    name: "School",
+    price: "₹449",
+    period: "/month",
+    subtitle: "₹299/mo billed annually",
+    accent: "#8B5CF6",
+    features: [
+      "Full School track (AI/ML, Class 8-12)",
+      "Board exam prep (CBSE/ICSE)",
+      "Riku AI companion",
+      "Projects + Career roadmap",
+      "Video explanations",
+      "Certificates",
+    ],
+    cta: "Start 2-Day Free Trial",
+    popular: false,
+  },
+];
+
+const STATS = [
+  { value: "21+", label: "Modules", icon: BookOpenCheck },
+  { value: "200+", label: "Lessons", icon: Users },
+  { value: "1000+", label: "Visualizations", icon: Sparkles },
+  { value: "195+", label: "Quizzes", icon: Award },
+];
+
+/* ================================================================== */
+/*  REVEAL ON SCROLL                                                   */
+/* ================================================================== */
+
+function Reveal({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setVisible(true);
+          obs.unobserve(el);
+        }
+      },
+      { threshold: 0.12 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   return (
-    <div className="min-h-screen bg-[#fdfbf6] text-[#2b2a35]">
-      {/* ---------- Hero ---------- */}
-      <header className="relative overflow-hidden notebook-grid">
-        {/* Floating doodle accents */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-[6%] top-[14%] text-5xl animate-float" style={{ color: "var(--accent-yellow)" }}>&#9733;</div>
-          <div className="absolute right-[8%] top-[18%] text-4xl animate-float float-delay-1" style={{ color: "var(--accent-coral)" }}>&#10022;</div>
-          <div className="absolute left-[12%] bottom-[18%] text-4xl animate-float float-delay-2" style={{ color: "var(--accent-mint)" }}>&#10047;</div>
-          <div className="absolute right-[14%] bottom-[22%] text-3xl animate-wiggle" style={{ color: "var(--accent-lav)" }}>&#9998;</div>
-          <div className="absolute left-[45%] top-[8%] text-2xl animate-wiggle" style={{ color: "var(--accent-sky)" }}>&#10042;</div>
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(28px)",
+        transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  HERO ANIMATION SHOWCASE — Cycling CS visualizations                */
+/* ================================================================== */
+
+const SCENE_INTERVAL = 4000;
+
+const SCENE_META = [
+  { label: "Bubble Sort", category: "DSA", color: "#E76F51" },
+  { label: "Neural Network", category: "Machine Learning", color: "#8B5CF6" },
+  { label: "Binary Tree", category: "Data Structures", color: "#1DC071" },
+  { label: "Packet Routing", category: "Computer Networks", color: "#3B82F6" },
+  { label: "Load Balancer", category: "System Design", color: "#FFB800" },
+  { label: "BFS Traversal", category: "Graph Algorithms", color: "#EC4899" },
+  { label: "CPU Scheduling", category: "Operating Systems", color: "#14B8A6" },
+  { label: "SQL Join", category: "Database Management", color: "#F97316" },
+];
+
+/* ---------- Scene 1: Bubble Sort ---------- */
+function SortingScene() {
+  const BARS = [
+    { id: 0, h: 65, color: "#E76F51" },
+    { id: 1, h: 25, color: "#FFB800" },
+    { id: 2, h: 50, color: "#1DC071" },
+    { id: 3, h: 80, color: "#3B82F6" },
+    { id: 4, h: 15, color: "#8B5CF6" },
+    { id: 5, h: 60, color: "#EC4899" },
+    { id: 6, h: 35, color: "#F97316" },
+    { id: 7, h: 45, color: "#14B8A6" },
+  ];
+
+  const stepsRef = useRef<{ id: number; h: number; color: string }[][] | null>(null);
+  if (!stepsRef.current) {
+    const arr = BARS.map((b) => ({ ...b }));
+    const s: (typeof arr)[] = [arr.map((b) => ({ ...b }))];
+    for (let i = 0; i < arr.length; i++)
+      for (let j = 0; j < arr.length - i - 1; j++)
+        if (arr[j].h > arr[j + 1].h) {
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+          s.push(arr.map((b) => ({ ...b })));
+        }
+    stepsRef.current = s;
+  }
+  const steps = stepsRef.current;
+  const [si, setSi] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setSi((p) => (p + 1) % steps.length), 450);
+    return () => clearInterval(t);
+  }, [steps]);
+
+  return (
+    <div className="relative w-full h-full">
+      {steps[si].map((bar, pos) => (
+        <div
+          key={bar.id}
+          className="absolute rounded-t-md"
+          style={{
+            width: "8%",
+            height: `${(bar.h / 80) * 50}%`,
+            background: bar.color,
+            bottom: "22%",
+            left: `${11 + pos * 10}%`,
+            transition: "left 0.35s cubic-bezier(0.4,0,0.2,1)",
+            opacity: 0.9,
+            borderRadius: "4px 4px 0 0",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Scene 2: Neural Network ---------- */
+function NeuralNetScene() {
+  const layers = [
+    { ys: [80, 140, 200], color: "#1DC071" },
+    { ys: [60, 120, 180, 240], color: "#FFB800" },
+    { ys: [110, 170], color: "#E76F51" },
+  ];
+  const xs = [65, 140, 215];
+
+  return (
+    <svg viewBox="0 0 280 280" className="w-full h-full" aria-hidden="true">
+      {/* Connections */}
+      {[0, 1].map((li) =>
+        layers[li].ys.map((y1, j) =>
+          layers[li + 1].ys.map((y2, k) => (
+            <line
+              key={`c-${li}-${j}-${k}`}
+              x1={xs[li]} y1={y1} x2={xs[li + 1]} y2={y2}
+              stroke="rgba(0,0,0,0.06)" strokeWidth={1.5}
+            />
+          ))
+        )
+      )}
+      {/* Signal pulses along connections */}
+      {[0, 1].map((li) =>
+        layers[li].ys.map((y1, j) =>
+          layers[li + 1].ys.map((y2, k) => (
+            <circle key={`s-${li}-${j}-${k}`} r={3} fill={layers[li].color} opacity={0.7}>
+              <animateMotion
+                dur={`${1.5 + (li * 4 + j + k) * 0.12}s`}
+                repeatCount="indefinite"
+                path={`M${xs[li]},${y1} L${xs[li + 1]},${y2}`}
+              />
+            </circle>
+          ))
+        )
+      )}
+      {/* Nodes */}
+      {layers.map((layer, li) =>
+        layer.ys.map((y, ni) => (
+          <g key={`n-${li}-${ni}`}>
+            <circle
+              cx={xs[li]} cy={y} r={14}
+              fill={`${layer.color}18`} stroke={layer.color} strokeWidth={2}
+              className="hero-nn-node"
+              style={{ animationDelay: `${li * 0.3 + ni * 0.1}s` }}
+            />
+            <text
+              x={xs[li]} y={y + 1} textAnchor="middle"
+              fill={layer.color} fontSize={8} fontWeight={700}
+            >
+              {li === 0 ? `x${ni + 1}` : li === 2 ? `y${ni + 1}` : ""}
+            </text>
+          </g>
+        ))
+      )}
+      {/* Layer labels */}
+      <text x={xs[0]} y={260} textAnchor="middle" fill="#8E95A2" fontSize={9}>Input</text>
+      <text x={xs[1]} y={260} textAnchor="middle" fill="#8E95A2" fontSize={9}>Hidden</text>
+      <text x={xs[2]} y={260} textAnchor="middle" fill="#8E95A2" fontSize={9}>Output</text>
+    </svg>
+  );
+}
+
+/* ---------- Scene 3: Binary Tree ---------- */
+function TreeScene() {
+  const nodes = [
+    { x: 140, y: 55, v: "10" },
+    { x: 85, y: 115, v: "5" },
+    { x: 195, y: 115, v: "15" },
+    { x: 55, y: 175, v: "3" },
+    { x: 115, y: 175, v: "7" },
+    { x: 165, y: 175, v: "12" },
+    { x: 225, y: 175, v: "20" },
+  ];
+  const edges: [number, number][] = [
+    [0, 1], [0, 2], [1, 3], [1, 4], [2, 5], [2, 6],
+  ];
+
+  return (
+    <svg viewBox="0 0 280 240" className="w-full h-full" aria-hidden="true">
+      {edges.map(([f, t], i) => (
+        <line
+          key={i}
+          x1={nodes[f].x} y1={nodes[f].y} x2={nodes[t].x} y2={nodes[t].y}
+          stroke="rgba(29,192,113,0.2)" strokeWidth={2}
+        />
+      ))}
+      {nodes.map((n, i) => (
+        <g key={i}>
+          <circle
+            cx={n.x} cy={n.y} r={20}
+            className="hero-tree-node"
+            style={{ animationDelay: `${i * 0.4}s` }}
+          />
+          <text
+            x={n.x} y={n.y + 5} textAnchor="middle"
+            fill="#1A1D26" fontSize={13} fontWeight={700}
+          >
+            {n.v}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ---------- Scene 4: Network Packet Routing ---------- */
+function NetworkScene() {
+  const nodes = [
+    { x: 140, y: 45, label: "Router" },
+    { x: 55, y: 130, label: "PC" },
+    { x: 225, y: 130, label: "Server" },
+    { x: 85, y: 210, label: "Phone" },
+    { x: 195, y: 210, label: "DB" },
+  ];
+  const edges: [number, number][] = [
+    [0, 1], [0, 2], [1, 3], [2, 4], [1, 2],
+  ];
+
+  return (
+    <svg viewBox="0 0 280 260" className="w-full h-full" aria-hidden="true">
+      {edges.map(([f, t], i) => (
+        <line
+          key={`e-${i}`}
+          x1={nodes[f].x} y1={nodes[f].y} x2={nodes[t].x} y2={nodes[t].y}
+          stroke="rgba(59,130,246,0.15)" strokeWidth={2} strokeDasharray="5 3"
+        />
+      ))}
+      {edges.map(([f, t], i) => (
+        <circle key={`p-${i}`} r={4} fill="#3B82F6" opacity={0.8}>
+          <animateMotion
+            dur={`${1.5 + i * 0.3}s`}
+            repeatCount="indefinite"
+            path={`M${nodes[f].x},${nodes[f].y} L${nodes[t].x},${nodes[t].y}`}
+          />
+        </circle>
+      ))}
+      {nodes.map((n, i) => (
+        <g key={`n-${i}`}>
+          <rect
+            x={n.x - 24} y={n.y - 14} width={48} height={28} rx={6}
+            fill="white" stroke="rgba(59,130,246,0.3)" strokeWidth={1.5}
+          />
+          <text
+            x={n.x} y={n.y + 4} textAnchor="middle"
+            fill="#3B82F6" fontSize={10} fontWeight={700}
+          >
+            {n.label}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ---------- Scene 5: System Design — Load Balancer ---------- */
+function SystemDesignScene() {
+  const servers = [
+    { x: 40, label: "Srv 1", color: "#3B82F6" },
+    { x: 110, label: "Srv 2", color: "#8B5CF6" },
+    { x: 180, label: "Srv 3", color: "#E76F51" },
+  ];
+
+  return (
+    <svg viewBox="0 0 280 270" className="w-full h-full" aria-hidden="true">
+      {/* Client */}
+      <rect x={100} y={20} width={80} height={30} rx={6} fill="#E8F8F0" stroke="#1DC071" strokeWidth={1.5} />
+      <text x={140} y={40} textAnchor="middle" fill="#1DC071" fontSize={11} fontWeight={700}>Client</text>
+
+      {/* Load Balancer */}
+      <rect x={80} y={85} width={120} height={35} rx={8} fill="#FFF4D6" stroke="#FFB800" strokeWidth={1.5} />
+      <text x={140} y={108} textAnchor="middle" fill="#FFB800" fontSize={11} fontWeight={700}>Load Balancer</text>
+
+      {/* Lines: Client → LB */}
+      <line x1={140} y1={50} x2={140} y2={85} stroke="rgba(0,0,0,0.1)" strokeWidth={1.5} />
+
+      {/* Servers */}
+      {servers.map((srv, i) => (
+        <g key={i}>
+          <line x1={80 + i * 30 + 20} y1={120} x2={srv.x + 35} y2={160} stroke="rgba(0,0,0,0.08)" strokeWidth={1.5} />
+          <rect x={srv.x} y={160} width={70} height={32} rx={6} fill={`${srv.color}10`} stroke={srv.color} strokeWidth={1.5} />
+          <text x={srv.x + 35} y={180} textAnchor="middle" fill={srv.color} fontSize={10} fontWeight={700}>{srv.label}</text>
+          {/* DB line */}
+          <line x1={srv.x + 35} y1={192} x2={140} y2={225} stroke="rgba(0,0,0,0.05)" strokeWidth={1} />
+        </g>
+      ))}
+
+      {/* Database */}
+      <ellipse cx={140} cy={235} rx={35} ry={14} fill="#E8F8F0" stroke="#1DC071" strokeWidth={1.5} />
+      <text x={140} y={239} textAnchor="middle" fill="#1DC071" fontSize={10} fontWeight={700}>Database</text>
+
+      {/* Animated requests */}
+      <circle r={3.5} fill="#1DC071" opacity={0.85}>
+        <animateMotion dur="1.4s" repeatCount="indefinite" path="M140,50 L140,85" />
+      </circle>
+      {servers.map((srv, i) => (
+        <circle key={`r-${i}`} r={3} fill={srv.color} opacity={0.8}>
+          <animateMotion
+            dur={`${1.2 + i * 0.25}s`}
+            repeatCount="indefinite"
+            path={`M${80 + i * 30 + 20},120 L${srv.x + 35},160`}
+          />
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
+/* ---------- Scene 6: Graph BFS ---------- */
+function GraphScene() {
+  const nodes = [
+    { x: 140, y: 45 },
+    { x: 70, y: 100 },
+    { x: 210, y: 100 },
+    { x: 40, y: 170 },
+    { x: 115, y: 165 },
+    { x: 175, y: 165 },
+    { x: 230, y: 170 },
+    { x: 140, y: 225 },
+  ];
+  const edges: [number, number][] = [
+    [0, 1], [0, 2], [1, 3], [1, 4], [2, 5], [2, 6], [4, 7], [5, 7], [3, 4],
+  ];
+
+  return (
+    <svg viewBox="0 0 280 270" className="w-full h-full" aria-hidden="true">
+      {edges.map(([f, t], i) => (
+        <line
+          key={i}
+          x1={nodes[f].x} y1={nodes[f].y} x2={nodes[t].x} y2={nodes[t].y}
+          stroke="rgba(236,72,153,0.15)" strokeWidth={2}
+        />
+      ))}
+      {nodes.map((n, i) => (
+        <g key={i}>
+          <circle
+            cx={n.x} cy={n.y} r={18}
+            className="hero-graph-node"
+            style={{ animationDelay: `${i * 0.35}s` }}
+          />
+          <text
+            x={n.x} y={n.y + 5} textAnchor="middle"
+            fill="#1A1D26" fontSize={12} fontWeight={700}
+          >
+            {i}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/* ---------- Scene 7: CPU Process Scheduling (OS) ---------- */
+function CpuSchedulingScene() {
+  const processes = [
+    { id: "P1", burst: 70, color: "#E76F51", arrival: 0 },
+    { id: "P2", burst: 40, color: "#3B82F6", arrival: 1 },
+    { id: "P3", burst: 55, color: "#1DC071", arrival: 2 },
+    { id: "P4", burst: 30, color: "#8B5CF6", arrival: 3 },
+    { id: "P5", burst: 50, color: "#FFB800", arrival: 4 },
+  ];
+
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setActive((p) => (p + 1) % processes.length), 700);
+    return () => clearInterval(t);
+  }, [processes.length]);
+
+  const barW = 260;
+  const barH = 22;
+  const startY = 48;
+  const gap = 10;
+
+  return (
+    <svg viewBox="0 0 280 280" className="w-full h-full" aria-hidden="true">
+      {/* CPU icon */}
+      <rect x={105} y={8} width={70} height={26} rx={5} fill="#14B8A618" stroke="#14B8A6" strokeWidth={1.5} />
+      <text x={140} y={25} textAnchor="middle" fill="#14B8A6" fontSize={10} fontWeight={700}>CPU</text>
+
+      {/* Gantt chart bars */}
+      {processes.map((p, i) => {
+        const isActive = i === active;
+        const x = 10;
+        const y = startY + i * (barH + gap);
+        const w = (p.burst / 100) * (barW - 50);
+        return (
+          <g key={p.id}>
+            {/* Label */}
+            <text x={x + 2} y={y + 15} fill="#1A1D26" fontSize={10} fontWeight={700}>{p.id}</text>
+            {/* Track */}
+            <rect x={x + 30} y={y} width={barW - 50} height={barH} rx={4}
+              fill="rgba(0,0,0,0.03)" stroke="rgba(0,0,0,0.06)" strokeWidth={1} />
+            {/* Progress bar */}
+            <rect x={x + 30} y={y} width={w} height={barH} rx={4}
+              fill={p.color}
+              opacity={isActive ? 0.9 : 0.25}
+              style={{ transition: "opacity 0.3s ease" }}
+            />
+            {/* Running indicator */}
+            {isActive && (
+              <circle cx={x + 30 + w + 8} cy={y + barH / 2} r={4}
+                fill={p.color} className="hero-pulse" />
+            )}
+            {/* Burst label */}
+            <text x={x + 30 + w / 2} y={y + 15} textAnchor="middle"
+              fill="white" fontSize={9} fontWeight={700} opacity={isActive ? 1 : 0.5}>
+              {p.burst}ms
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Timeline */}
+      <line x1={40} y1={startY + processes.length * (barH + gap) + 5}
+        x2={barW} y2={startY + processes.length * (barH + gap) + 5}
+        stroke="rgba(0,0,0,0.1)" strokeWidth={1} />
+      {[0, 25, 50, 75, 100].map((t) => (
+        <text key={t}
+          x={40 + (t / 100) * (barW - 50)}
+          y={startY + processes.length * (barH + gap) + 18}
+          textAnchor="middle" fill="#8E95A2" fontSize={8}
+        >
+          {t}ms
+        </text>
+      ))}
+
+      {/* Status */}
+      <text x={140} y={startY + processes.length * (barH + gap) + 34}
+        textAnchor="middle" fill="#14B8A6" fontSize={10} fontWeight={700}>
+        Round Robin · Q=20ms
+      </text>
+    </svg>
+  );
+}
+
+/* ---------- Scene 8: SQL Join (DBMS) ---------- */
+function SqlJoinScene() {
+  const [highlightRow, setHighlightRow] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setHighlightRow((p) => (p + 1) % 4), 600);
+    return () => clearInterval(t);
+  }, []);
+
+  const leftTable = [
+    { id: "1", name: "Alice" },
+    { id: "2", name: "Bob" },
+    { id: "3", name: "Carol" },
+    { id: "4", name: "Dave" },
+  ];
+  const rightTable = [
+    { uid: "1", dept: "Engg" },
+    { uid: "3", dept: "Math" },
+    { uid: "2", dept: "Sci" },
+    { uid: "5", dept: "Arts" },
+  ];
+
+  const rowH = 24;
+  const headerH = 28;
+  const tblW = 90;
+  const leftX = 15;
+  const rightX = 175;
+  const resultX = 82;
+
+  return (
+    <svg viewBox="0 0 280 280" className="w-full h-full" aria-hidden="true">
+      {/* Left table: Users */}
+      <rect x={leftX} y={30} width={tblW} height={headerH} rx={5} fill="#F9731618" stroke="#F97316" strokeWidth={1.5} />
+      <text x={leftX + tblW / 2} y={49} textAnchor="middle" fill="#F97316" fontSize={10} fontWeight={700}>Users</text>
+
+      <rect x={leftX} y={30 + headerH} width={tblW / 2} height={18} fill="#F9731610" />
+      <text x={leftX + tblW / 4} y={30 + headerH + 13} textAnchor="middle" fill="#8E95A2" fontSize={8} fontWeight={700}>id</text>
+      <rect x={leftX + tblW / 2} y={30 + headerH} width={tblW / 2} height={18} fill="#F9731608" />
+      <text x={leftX + tblW * 3 / 4} y={30 + headerH + 13} textAnchor="middle" fill="#8E95A2" fontSize={8} fontWeight={700}>name</text>
+
+      {leftTable.map((r, i) => {
+        const y = 30 + headerH + 18 + i * rowH;
+        const matched = r.id === rightTable[highlightRow]?.uid;
+        return (
+          <g key={`l-${i}`}>
+            <rect x={leftX} y={y} width={tblW} height={rowH}
+              fill={matched ? "rgba(249,115,22,0.12)" : "transparent"}
+              style={{ transition: "fill 0.3s ease" }} />
+            <line x1={leftX} y1={y + rowH} x2={leftX + tblW} y2={y + rowH} stroke="rgba(0,0,0,0.05)" strokeWidth={0.5} />
+            <text x={leftX + tblW / 4} y={y + 16} textAnchor="middle" fill="#1A1D26" fontSize={9} fontWeight={matched ? 700 : 400}>{r.id}</text>
+            <text x={leftX + tblW * 3 / 4} y={y + 16} textAnchor="middle" fill="#1A1D26" fontSize={9} fontWeight={matched ? 700 : 400}>{r.name}</text>
+          </g>
+        );
+      })}
+
+      {/* Right table: Departments */}
+      <rect x={rightX} y={30} width={tblW} height={headerH} rx={5} fill="#3B82F610" stroke="#3B82F6" strokeWidth={1.5} />
+      <text x={rightX + tblW / 2} y={49} textAnchor="middle" fill="#3B82F6" fontSize={10} fontWeight={700}>Depts</text>
+
+      <rect x={rightX} y={30 + headerH} width={tblW / 2} height={18} fill="#3B82F610" />
+      <text x={rightX + tblW / 4} y={30 + headerH + 13} textAnchor="middle" fill="#8E95A2" fontSize={8} fontWeight={700}>uid</text>
+      <rect x={rightX + tblW / 2} y={30 + headerH} width={tblW / 2} height={18} fill="#3B82F608" />
+      <text x={rightX + tblW * 3 / 4} y={30 + headerH + 13} textAnchor="middle" fill="#8E95A2" fontSize={8} fontWeight={700}>dept</text>
+
+      {rightTable.map((r, i) => {
+        const y = 30 + headerH + 18 + i * rowH;
+        const isActive = i === highlightRow;
+        return (
+          <g key={`r-${i}`}>
+            <rect x={rightX} y={y} width={tblW} height={rowH}
+              fill={isActive ? "rgba(59,130,246,0.12)" : "transparent"}
+              style={{ transition: "fill 0.3s ease" }} />
+            <line x1={rightX} y1={y + rowH} x2={rightX + tblW} y2={y + rowH} stroke="rgba(0,0,0,0.05)" strokeWidth={0.5} />
+            <text x={rightX + tblW / 4} y={y + 16} textAnchor="middle" fill="#1A1D26" fontSize={9} fontWeight={isActive ? 700 : 400}>{r.uid}</text>
+            <text x={rightX + tblW * 3 / 4} y={y + 16} textAnchor="middle" fill="#1A1D26" fontSize={9} fontWeight={isActive ? 700 : 400}>{r.dept}</text>
+          </g>
+        );
+      })}
+
+      {/* Join arrow */}
+      {(() => {
+        const activeRight = rightTable[highlightRow];
+        const matchIdx = leftTable.findIndex((l) => l.id === activeRight?.uid);
+        if (matchIdx === -1) return null;
+        const ly = 30 + headerH + 18 + matchIdx * rowH + rowH / 2;
+        const ry = 30 + headerH + 18 + highlightRow * rowH + rowH / 2;
+        return (
+          <g>
+            <path
+              d={`M${leftX + tblW},${ly} C${140},${ly} ${140},${ry} ${rightX},${ry}`}
+              fill="none" stroke="#F97316" strokeWidth={1.5} opacity={0.5}
+              strokeDasharray="4 3"
+            />
+            <circle r={3} fill="#F97316" opacity={0.8}>
+              <animateMotion dur="1s" repeatCount="indefinite"
+                path={`M${leftX + tblW},${ly} C${140},${ly} ${140},${ry} ${rightX},${ry}`} />
+            </circle>
+          </g>
+        );
+      })()}
+
+      {/* Result label */}
+      <rect x={resultX} y={230} width={116} height={28} rx={6} fill="#F9731612" stroke="#F97316" strokeWidth={1} />
+      <text x={resultX + 58} y={248} textAnchor="middle" fill="#F97316" fontSize={10} fontWeight={700}>
+        INNER JOIN ON id
+      </text>
+    </svg>
+  );
+}
+
+const SCENE_COMPONENTS = [SortingScene, NeuralNetScene, TreeScene, NetworkScene, SystemDesignScene, GraphScene, CpuSchedulingScene, SqlJoinScene];
+
+/* ---------- Showcase wrapper ---------- */
+function HeroShowcase() {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setActiveIdx((p) => (p + 1) % SCENE_META.length);
+        setFading(false);
+      }, 400);
+    }, SCENE_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
+
+  const scene = SCENE_META[activeIdx];
+  const Scene = SCENE_COMPONENTS[activeIdx];
+
+  return (
+    <div className="relative w-full max-w-[520px] mx-auto aspect-square">
+      {/* Outer dashed ring */}
+      <div
+        className="absolute inset-[3%] rounded-full hero-spin-slow"
+        style={{ border: "3px dashed rgba(29,192,113,0.2)" }}
+      />
+
+      {/* Background circle */}
+      <div
+        className="absolute inset-[8%] rounded-full"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(29,192,113,0.08), rgba(29,192,113,0.02))",
+        }}
+      />
+
+      {/* Scene container */}
+      <div
+        className="absolute inset-[10%] rounded-full overflow-hidden"
+        style={{
+          transition: "opacity 0.4s ease",
+          opacity: fading ? 0 : 1,
+        }}
+      >
+        <Scene key={activeIdx} />
+      </div>
+
+      {/* Scene label card */}
+      <div
+        className="absolute bottom-[1%] left-1/2 -translate-x-1/2 z-10"
+        style={{ transition: "opacity 0.3s ease", opacity: fading ? 0 : 1 }}
+      >
+        <div
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl whitespace-nowrap"
+          style={{
+            background: "#FFFFFF",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
+            border: "1px solid rgba(0,0,0,0.04)",
+          }}
+        >
+          <div
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ background: scene.color }}
+          />
+          <div>
+            <div
+              className="text-xs font-bold"
+              style={{ color: T.text, fontFamily: T.heading }}
+            >
+              {scene.label}
+            </div>
+            <div className="text-[10px]" style={{ color: T.textMuted }}>
+              {scene.category}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation dots */}
+      <div className="absolute bottom-[-6%] left-1/2 -translate-x-1/2 flex gap-1.5">
+        {SCENE_META.map((_, i) => (
+          <div
+            key={i}
+            className="w-2 h-2 rounded-full transition-all duration-300"
+            style={{
+              background:
+                i === activeIdx ? "#1DC071" : "rgba(29,192,113,0.2)",
+              transform: i === activeIdx ? "scale(1.4)" : "scale(1)",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Floating book icon — top left */}
+      <div
+        className="absolute top-[5%] left-[0%] hero-float"
+        style={{ animationDelay: "0.5s" }}
+      >
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center rotate-[-12deg]"
+          style={{
+            background: "#FFF4D6",
+            boxShadow: "0 4px 14px rgba(255,184,0,0.15)",
+          }}
+        >
+          <BookOpen className="w-5 h-5" style={{ color: "#FFB800" }} />
+        </div>
+      </div>
+
+      {/* Decorative dots */}
+      <div
+        className="absolute bottom-[22%] right-[-2%] w-3 h-3 rounded-full hero-pulse"
+        style={{ background: T.primary, animationDelay: "1s" }}
+      />
+      <div
+        className="absolute top-[28%] left-[-2%] w-2.5 h-2.5 rounded-full hero-pulse"
+        style={{ background: "#FFB800", animationDelay: "1.5s" }}
+      />
+
+      {/* Dot grid — bottom right */}
+      <div className="absolute bottom-[8%] right-[0%]">
+        <div className="grid grid-cols-4 gap-1.5">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full"
+              style={{ background: "rgba(29,192,113,0.2)" }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================== */
+/*  COMPONENT                                                          */
+/* ================================================================== */
+
+export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  const headingFont = { fontFamily: T.heading };
+
+  return (
+    <div
+      className="min-h-screen"
+      style={{ fontFamily: T.body, background: T.bg, color: T.text }}
+    >
+      {/* ==================== NAVBAR ==================== */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+        style={{
+          background: scrolled ? "rgba(255,255,255,0.92)" : "transparent",
+          backdropFilter: scrolled ? "blur(20px) saturate(1.4)" : "none",
+          borderBottom: scrolled ? `1px solid ${T.border}` : "1px solid transparent",
+          boxShadow: scrolled ? "0 1px 12px rgba(0,0,0,0.04)" : "none",
+        }}
+        role="navigation"
+        aria-label="Main navigation"
+      >
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 flex items-center justify-between h-[72px]">
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 shrink-0 group"
+            aria-label="Red Panda Learn home"
+          >
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-[-4deg]"
+              style={{ background: "#E76F51" }}
+            >
+              <PandaLogo size={22} />
+            </div>
+            <span
+              className="text-[18px] font-bold tracking-tight"
+              style={{ ...headingFont, color: T.text }}
+            >
+              Red Panda{" "}
+              <span style={{ color: T.primary }}>Learn</span>
+            </span>
+          </Link>
+
+          {/* Center links */}
+          <div className="hidden md:flex items-center gap-1">
+            {[
+              { label: "Home", href: "#" },
+              { label: "Course Catalog", href: "#tracks" },
+              { label: "Features", href: "#features" },
+              { label: "Pricing", href: "#pricing" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className="px-4 py-2 text-[14px] font-medium rounded-lg transition-all duration-200 hover:text-[#1DC071] hover:bg-[rgba(29,192,113,0.06)]"
+                style={{ color: T.textSecondary }}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/level1/machines"
+              className="hidden md:inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-[14px] font-semibold text-white transition-all duration-300 hover:shadow-lg hover:shadow-[rgba(29,192,113,0.25)] hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: T.primary }}
+            >
+              Start Learning
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <button
+              className="md:hidden p-2 rounded-lg transition-all"
+              style={{ color: T.textSecondary }}
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed top-[72px] left-4 right-4 z-50 rounded-2xl md:hidden"
+          style={{
+            background: "rgba(255,255,255,0.98)",
+            border: `1px solid ${T.border}`,
+            backdropFilter: "blur(24px)",
+            boxShadow: "0 12px 40px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div className="p-3 flex flex-col gap-0.5">
+            {[
+              { label: "Home", href: "#" },
+              { label: "Course Catalog", href: "#tracks" },
+              { label: "Features", href: "#features" },
+              { label: "Pricing", href: "#pricing" },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-sm font-medium py-2.5 px-3 rounded-xl transition-all hover:bg-[rgba(29,192,113,0.06)]"
+                style={{ color: T.textSecondary }}
+              >
+                {item.label}
+              </a>
+            ))}
+            <div
+              className="mt-1 pt-2"
+              style={{ borderTop: `1px solid ${T.border}` }}
+            >
+              <Link
+                href="/level1/machines"
+                className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white"
+                style={{ background: T.primary }}
+              >
+                Start Learning
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== HERO ==================== */}
+      <header className="relative overflow-hidden pt-[100px] sm:pt-[120px] pb-10 sm:pb-16">
+        {/* Soft gradient backgrounds */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div
+            className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(29, 192, 113, 0.08), transparent 70%)",
+              filter: "blur(60px)",
+            }}
+          />
+          <div
+            className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full"
+            style={{
+              background: "radial-gradient(circle, rgba(255, 184, 0, 0.06), transparent 70%)",
+              filter: "blur(60px)",
+            }}
+          />
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 pt-16 pb-20 sm:pt-24 sm:pb-28 text-center relative">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6 border-2 border-[#2b2a35]"
-            style={{ background: "var(--accent-yellow)", boxShadow: "2px 2px 0 #2b2a35" }}
-          >
-            <Brain className="w-3.5 h-3.5" />
-            CBSE &middot; ICSE &middot; State Boards &middot; Class 8&ndash;12
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-8">
+            {/* Left — Text content */}
+            <div className="flex-1 text-center lg:text-left max-w-xl lg:max-w-none">
+              <Reveal>
+                <h1
+                  className="text-[36px] sm:text-[48px] lg:text-[56px] font-extrabold tracking-tight leading-[1.1]"
+                  style={{ ...headingFont, color: T.text }}
+                >
+                  Explore thousands
+                  <br />
+                  hands-on creative{" "}
+                  <span className="relative inline-block">
+                    <span style={{ color: T.primary }}>courses</span>
+                    <svg
+                      className="absolute -bottom-2 left-0 w-full"
+                      viewBox="0 0 200 12"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M2 8 C 40 2, 80 2, 100 6 S 160 12, 198 4"
+                        stroke="#1DC071"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        fill="none"
+                        className="hero-underline-draw"
+                      />
+                    </svg>
+                  </span>
+                </h1>
+              </Reveal>
+
+              <Reveal delay={0.08}>
+                <p
+                  className="mt-6 text-[16px] sm:text-[18px] leading-relaxed max-w-lg mx-auto lg:mx-0"
+                  style={{ color: T.textSecondary }}
+                >
+                  Enroll in immersive classes with the world&apos;s best
+                  interactive visualizations. Unlock your creative potential in
+                  AI, ML, and Computer Science.
+                </p>
+              </Reveal>
+
+              <Reveal delay={0.16}>
+                <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 lg:justify-start justify-center">
+                  <Link
+                    href="/level1/machines"
+                    className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl text-[15px] font-semibold text-white transition-all duration-300 hover:shadow-xl hover:shadow-[rgba(29,192,113,0.2)] hover:scale-[1.02] active:scale-[0.98]"
+                    style={{
+                      background: T.primary,
+                      boxShadow: "0 4px 16px rgba(29, 192, 113, 0.25)",
+                    }}
+                  >
+                    Explore Classes
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                  <a
+                    href="#tracks"
+                    className="inline-flex items-center gap-2 px-6 py-4 rounded-2xl text-[15px] font-semibold transition-all duration-200 hover:bg-[rgba(0,0,0,0.03)]"
+                    style={{ color: T.textSecondary }}
+                  >
+                    Browse Catalog
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
+                </div>
+              </Reveal>
+            </div>
+
+            {/* Right — Illustration */}
+            <div className="flex-1 w-full max-w-[480px] lg:max-w-[520px]">
+              <Reveal delay={0.12}>
+                <HeroShowcase />
+              </Reveal>
+            </div>
           </div>
 
-          {/* Title */}
-          <div className="mb-4 text-6xl">&#x1F43C;</div>
-          <h1 className="font-hand text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-            Learn AI.
-            <br />
-            <span className="marker-highlight-yellow">Made Fun.</span>
-          </h1>
-
-          <p className="mt-6 text-lg sm:text-xl text-[#6b6776] max-w-2xl mx-auto leading-relaxed">
-            The AI learning platform for Class 8&ndash;12 students in India. Stories, memes, games, and real-world
-            adventures &mdash; no boring lectures, no heavy coding. Just curiosity.
-          </p>
-
-          {/* CTA buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              onClick={() => {
-                playClick();
-                router.push("/level1/machines");
+          {/* Stats bar */}
+          <Reveal delay={0.28}>
+            <div
+              className="mt-16 sm:mt-20 grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-0 max-w-4xl mx-auto rounded-3xl py-8 px-6 sm:px-10"
+              style={{
+                background: T.bg,
+                boxShadow: "0 4px 40px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)",
+                border: `1px solid ${T.borderLight}`,
               }}
-              className="btn-sketchy text-lg"
             >
-              <Play className="w-4 h-4" />
-              Start Learning
-            </button>
-            <a
-              href="#levels"
-              onClick={() => playClick()}
-              className="btn-sketchy-outline text-lg"
-            >
-              <BookOpen className="w-4 h-4" />
-              Browse Curriculum
-            </a>
-          </div>
-
-          {/* Hero visual  mini neural network SVG */}
-          <div className="mt-14 flex justify-center">
-            <svg viewBox="0 0 400 160" className="w-full max-w-md">
-              {[40, 80, 120].map((y, i) => (
-                <g key={`in-${i}`}>
-                  <circle cx={60} cy={y} r={15} fill="#fff3a0" stroke="#2b2a35" strokeWidth={2.5} />
-                  <text x={60} y={y + 4} textAnchor="middle" className="text-[11px] font-bold" fill="#2b2a35" fontFamily="Kalam">
-                    {["x1", "x2", "x3"][i]}
-                  </text>
-                </g>
-              ))}
-              {[50, 90, 130].map((y, i) => (
-                <g key={`h-${i}`}>
-                  <circle cx={200} cy={y} r={15} fill="#d6c2ff" stroke="#2b2a35" strokeWidth={2.5} />
-                  <text x={200} y={y + 4} textAnchor="middle" className="text-[11px] font-bold" fill="#2b2a35" fontFamily="Kalam">
-                    {["h1", "h2", "h3"][i]}
-                  </text>
-                </g>
-              ))}
-              <circle cx={340} cy={80} r={17} fill="#a8e8e3" stroke="#2b2a35" strokeWidth={2.5} />
-              <text x={340} y={84} textAnchor="middle" className="text-[12px] font-bold" fill="#2b2a35" fontFamily="Kalam">
-                y
-              </text>
-              {[40, 80, 120].map((y1) =>
-                [50, 90, 130].map((y2) => (
-                  <line key={`c1-${y1}-${y2}`} x1={75} y1={y1} x2={185} y2={y2} stroke="#2b2a35" strokeWidth={1.2} strokeDasharray="3 2" />
-                ))
-              )}
-              {[50, 90, 130].map((y) => (
-                <line key={`c2-${y}`} x1={215} y1={y} x2={323} y2={80} stroke="#2b2a35" strokeWidth={1.2} strokeDasharray="3 2" />
-              ))}
-              <text x={60} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Input</text>
-              <text x={200} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Hidden</text>
-              <text x={340} y={155} textAnchor="middle" className="text-[10px]" fill="#6b6776" fontFamily="Kalam">Output</text>
-            </svg>
-          </div>
+              {STATS.map((stat, i) => {
+                const Icon = stat.icon;
+                return (
+                  <div
+                    key={stat.label}
+                    className="flex items-center gap-3 sm:justify-center"
+                    style={{
+                      borderRight:
+                        i < STATS.length - 1
+                          ? `1px solid ${T.borderLight}`
+                          : "none",
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: T.primaryLight }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: T.primary }} />
+                    </div>
+                    <div>
+                      <div
+                        className="text-xl sm:text-2xl font-extrabold"
+                        style={{ ...headingFont, color: T.text }}
+                      >
+                        {stat.value}
+                      </div>
+                      <div
+                        className="text-xs font-medium"
+                        style={{ color: T.textMuted }}
+                      >
+                        {stat.label}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Reveal>
         </div>
       </header>
 
-      {/* ---------- Features row ---------- */}
-      <section className="max-w-5xl mx-auto px-4 pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="card-sketchy p-5 hover:-translate-y-1 transition-transform">
+      {/* ==================== TRACK SELECTOR ==================== */}
+      <section
+        id="tracks"
+        className="py-20 sm:py-28"
+        style={{ background: T.bgSection }}
+      >
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <Reveal>
+            <div className="text-center mb-16">
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 border-2 border-[#2b2a35]"
-                style={{ background: f.accent }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-5"
+                style={{ background: T.primaryLight, color: T.primary }}
               >
-                {f.icon}
+                <Sparkles className="w-3.5 h-3.5" />
+                LEARNING PATHS
               </div>
-              <h3 className="font-hand text-xl font-bold text-[#2b2a35]">{f.title}</h3>
-              <p className="text-sm text-[#6b6776] mt-1 leading-relaxed">{f.desc}</p>
+              <h2
+                className="text-3xl sm:text-[40px] font-bold tracking-tight"
+                style={{ ...headingFont, color: T.text }}
+              >
+                Choose Your Path
+              </h2>
+              <p
+                className="mt-4 text-lg max-w-xl mx-auto"
+                style={{ color: T.textSecondary }}
+              >
+                Two structured learning tracks designed for different stages of
+                your CS journey.
+              </p>
             </div>
-          ))}
+          </Reveal>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            {/* School Track */}
+            <Reveal delay={0.1}>
+              <div
+                className="relative rounded-3xl p-8 sm:p-10 transition-all duration-300 group overflow-hidden h-full hover:shadow-xl hover:shadow-[rgba(29,192,113,0.08)] hover:translate-y-[-2px]"
+                style={{
+                  background: T.card,
+                  border: `1px solid ${T.border}`,
+                }}
+              >
+                <div
+                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-3xl"
+                  style={{
+                    background: `linear-gradient(90deg, ${T.primary}, rgba(29,192,113,0.3))`,
+                  }}
+                />
+
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-5 text-sm">
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-bold"
+                      style={{
+                        background: T.primaryLight,
+                        color: T.primary,
+                      }}
+                    >
+                      School
+                    </span>
+                    <span style={{ color: T.textMuted }}>
+                      Class 8-12
+                    </span>
+                  </div>
+
+                  <h3
+                    className="text-2xl font-bold mb-3"
+                    style={{ ...headingFont, color: T.text }}
+                  >
+                    AI &amp; Machine Learning
+                  </h3>
+
+                  <p
+                    className="leading-relaxed mb-6"
+                    style={{ color: T.textSecondary }}
+                  >
+                    From &ldquo;What is a machine?&rdquo; to building neural
+                    networks. Fun, visual, story-driven lessons that make
+                    complex concepts click.
+                  </p>
+
+                  <p
+                    className="text-sm font-medium mb-4"
+                    style={{ color: T.textMuted }}
+                  >
+                    Covers CBSE, ICSE &amp; State Boards
+                  </p>
+
+                  <div
+                    className="text-sm font-medium mb-6"
+                    style={{ color: T.textMuted }}
+                  >
+                    9 Levels &middot; 45 Lessons
+                  </div>
+
+                  <Link
+                    href="/level1/machines"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-[rgba(29,192,113,0.2)]"
+                    style={{ background: T.primary }}
+                  >
+                    Start School Track
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Engineering Track */}
+            <Reveal delay={0.2}>
+              <div
+                className="relative rounded-3xl p-8 sm:p-10 transition-all duration-300 group overflow-hidden h-full hover:shadow-xl hover:shadow-[rgba(231,111,81,0.08)] hover:translate-y-[-2px]"
+                style={{
+                  background: T.card,
+                  border: `1px solid ${T.border}`,
+                }}
+              >
+                <div
+                  className="absolute top-0 left-0 right-0 h-[3px] rounded-t-3xl"
+                  style={{
+                    background: "linear-gradient(90deg, #E76F51, #8B5CF6)",
+                  }}
+                />
+
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-5 text-sm">
+                    <span
+                      className="px-3 py-1 rounded-full text-xs font-bold"
+                      style={{
+                        background: "rgba(231,111,81,0.1)",
+                        color: "#E76F51",
+                      }}
+                    >
+                      Engineering
+                    </span>
+                    <span style={{ color: T.textMuted }}>
+                      B.Tech CSE
+                    </span>
+                  </div>
+
+                  <h3
+                    className="text-2xl font-bold mb-3"
+                    style={{ ...headingFont, color: T.text }}
+                  >
+                    Core Computer Science
+                  </h3>
+
+                  <p
+                    className="leading-relaxed mb-6"
+                    style={{ color: T.textSecondary }}
+                  >
+                    DSA, Networks, OS, DBMS, and OOP. Interactive
+                    visualizations and step-by-step algorithm tracing for deep
+                    understanding.
+                  </p>
+
+                  <p
+                    className="text-sm font-medium mb-4"
+                    style={{ color: T.textMuted }}
+                  >
+                    Covers GATE, Placements &amp; Semester Exams
+                  </p>
+
+                  <div
+                    className="text-sm font-medium mb-6"
+                    style={{ color: T.textMuted }}
+                  >
+                    5 Subjects &middot; 150+ Lessons
+                  </div>
+
+                  <Link
+                    href="/engineering"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-[rgba(231,111,81,0.2)]"
+                    style={{ background: "#E76F51" }}
+                  >
+                    Start Engineering Track
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* ---------- Levels grid ---------- */}
-      <section id="levels" className="max-w-5xl mx-auto px-4 pb-24">
-        <div className="text-center mb-12">
-          <h2 className="font-hand text-4xl sm:text-5xl font-bold text-[#2b2a35]">
-            Your Learning <span className="marker-highlight-mint">Track</span>
-          </h2>
-          <p className="text-[#6b6776] mt-3 text-lg">
-            9 levels &middot; 36 lessons &middot; From &ldquo;What is a machine?&rdquo; to building CNNs
-          </p>
-        </div>
+      {/* ==================== SUBJECT GRID ==================== */}
+      <section className="py-20 sm:py-28" style={{ background: T.bg }}>
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <Reveal>
+            <div className="text-center mb-16">
+              <h2
+                className="text-3xl sm:text-[40px] font-bold tracking-tight"
+                style={{ ...headingFont, color: T.text }}
+              >
+                What You&apos;ll Master
+              </h2>
+              <p
+                className="mt-4 text-lg max-w-xl mx-auto"
+                style={{ color: T.textSecondary }}
+              >
+                Five core engineering subjects, each with comprehensive visual
+                lessons.
+              </p>
+            </div>
+          </Reveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {LEVEL_CARDS.map((card) => (
-            <button
-              key={card.level}
-              onClick={() => {
-                playClick();
-                router.push(card.path);
-              }}
-              className="group card-sketchy text-left p-6 hover:-translate-y-1 transition-transform"
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {ENGINEERING_SUBJECTS.map((subject, i) => {
+              const Icon = subject.icon;
+              return (
+                <Reveal key={subject.title} delay={0.06 * i}>
                   <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center border-2 border-[#2b2a35]"
-                    style={{ background: card.accent, boxShadow: "2px 2px 0 #2b2a35" }}
+                    className="rounded-2xl p-7 transition-all duration-300 group h-full hover:shadow-lg hover:translate-y-[-2px]"
+                    style={{
+                      background: T.card,
+                      border: `1px solid ${T.border}`,
+                      borderLeft: `3px solid ${subject.accent}`,
+                    }}
                   >
-                    {card.icon}
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-[#6b6776] uppercase tracking-wider font-hand">
-                      Level {card.level}
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                      style={{ background: subject.accentBg }}
+                    >
+                      <Icon
+                        className="w-6 h-6"
+                        style={{ color: subject.accent }}
+                      />
+                    </div>
+                    <h3
+                      className="text-lg font-bold mb-2"
+                      style={{ ...headingFont, color: T.text }}
+                    >
+                      {subject.title}
+                    </h3>
+                    <p
+                      className="text-sm leading-relaxed mb-4"
+                      style={{ color: T.textSecondary }}
+                    >
+                      {subject.desc}
                     </p>
-                    <h3 className="font-hand text-xl font-bold text-[#2b2a35]">{card.title}</h3>
+                    <div
+                      className="text-xs font-medium"
+                      style={{ color: T.textMuted }}
+                    >
+                      {subject.levels} &middot; {subject.lessons}
+                    </div>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== VISUALIZATION SHOWCASE ==================== */}
+      <section
+        id="features"
+        className="py-20 sm:py-28"
+        style={{ background: T.bgSection }}
+      >
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <Reveal>
+            <div className="text-center mb-16">
+              <h2
+                className="text-3xl sm:text-[40px] font-bold tracking-tight"
+                style={{ ...headingFont, color: T.text }}
+              >
+                See It. Understand It.
+              </h2>
+              <p
+                className="mt-4 text-lg max-w-xl mx-auto"
+                style={{ color: T.textSecondary }}
+              >
+                Every concept comes alive with interactive visualizations.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {VIZ_FEATURES.map((feature, i) => {
+              const Icon = feature.icon;
+              return (
+                <Reveal key={feature.title} delay={0.08 * i}>
+                  <div
+                    className="rounded-2xl p-7 transition-all duration-300 h-full hover:shadow-lg hover:translate-y-[-2px]"
+                    style={{
+                      background: T.card,
+                      border: `1px solid ${T.border}`,
+                    }}
+                  >
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
+                      style={{ background: T.primaryLight }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: T.primary }} />
+                    </div>
+                    <h3
+                      className="text-lg font-bold mb-2"
+                      style={{ ...headingFont, color: T.text }}
+                    >
+                      {feature.title}
+                    </h3>
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: T.textSecondary }}
+                    >
+                      {feature.desc}
+                    </p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== WHO IT'S FOR ==================== */}
+      <section className="py-20 sm:py-28" style={{ background: T.bg }}>
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <Reveal>
+            <div className="text-center mb-16">
+              <h2
+                className="text-3xl sm:text-[40px] font-bold tracking-tight"
+                style={{ ...headingFont, color: T.text }}
+              >
+                Built for Every Stage
+              </h2>
+              <p
+                className="mt-4 text-lg max-w-xl mx-auto"
+                style={{ color: T.textSecondary }}
+              >
+                Whether you&apos;re starting out or preparing for your career,
+                we&apos;ve got you covered.
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {AUDIENCE.map((item, i) => {
+              const Icon = item.icon;
+              return (
+                <Reveal key={item.title} delay={0.08 * i}>
+                  <div
+                    className="rounded-2xl p-6 text-center transition-all duration-300 h-full hover:shadow-lg hover:translate-y-[-2px]"
+                    style={{
+                      background: T.card,
+                      border: `1px solid ${T.border}`,
+                    }}
+                  >
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                      style={{ background: `${item.accent}12` }}
+                    >
+                      <Icon
+                        className="w-7 h-7"
+                        style={{ color: item.accent }}
+                      />
+                    </div>
+                    <h3
+                      className="text-base font-bold mb-1.5"
+                      style={{ ...headingFont, color: T.text }}
+                    >
+                      {item.title}
+                    </h3>
+                    <p
+                      className="text-sm leading-relaxed"
+                      style={{ color: T.textSecondary }}
+                    >
+                      {item.desc}
+                    </p>
+                  </div>
+                </Reveal>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ==================== PRICING ==================== */}
+      <section
+        id="pricing"
+        className="py-20 sm:py-28"
+        style={{ background: T.bgSection }}
+      >
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <Reveal>
+            <div className="text-center mb-16">
+              <h2
+                className="text-3xl sm:text-[40px] font-bold tracking-tight"
+                style={{ ...headingFont, color: T.text }}
+              >
+                Simple, Transparent Pricing
+              </h2>
+              <p
+                className="mt-4 text-lg max-w-xl mx-auto"
+                style={{ color: T.textSecondary }}
+              >
+                Start free. Upgrade when you&apos;re ready. 2-day free trial on
+                all paid plans.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+              {PRICING_PLANS.map((plan) => (
+                <div
+                  key={plan.name}
+                  className="rounded-3xl p-[1.5px]"
+                  style={{
+                    background: plan.popular
+                      ? `linear-gradient(135deg, ${plan.accent}, #8B5CF6, ${T.primary})`
+                      : T.border,
+                  }}
+                >
+                  <div
+                    className="rounded-3xl p-6 sm:p-8 h-full flex flex-col"
+                    style={{ background: T.card }}
+                  >
+                    {plan.popular && (
+                      <div
+                        className="text-[10px] font-bold uppercase tracking-wider text-center py-1 px-3 rounded-full mb-4 self-center"
+                        style={{
+                          background: `${plan.accent}15`,
+                          color: plan.accent,
+                        }}
+                      >
+                        Most Popular
+                      </div>
+                    )}
+
+                    <h3
+                      className="text-lg font-bold mb-1"
+                      style={{ ...headingFont, color: T.text }}
+                    >
+                      {plan.name}
+                    </h3>
+
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span
+                        className="text-3xl font-extrabold"
+                        style={{ ...headingFont, color: T.text }}
+                      >
+                        {plan.price}
+                      </span>
+                      <span
+                        className="text-sm font-semibold"
+                        style={{ color: T.textMuted }}
+                      >
+                        {plan.period}
+                      </span>
+                    </div>
+
+                    <p
+                      className="text-xs mb-6"
+                      style={{ color: T.textMuted }}
+                    >
+                      {plan.subtitle}
+                    </p>
+
+                    <ul className="space-y-3 mb-8 flex-1" role="list">
+                      {plan.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex items-start gap-2.5"
+                        >
+                          <Check
+                            className="w-3.5 h-3.5 shrink-0 mt-0.5"
+                            style={{ color: plan.accent }}
+                          />
+                          <span
+                            className="text-sm font-medium"
+                            style={{ color: T.textSecondary }}
+                          >
+                            {feature}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Link
+                      href="/level1/machines"
+                      className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
+                      style={{
+                        background: plan.popular ? plan.accent : "transparent",
+                        color: plan.popular ? "#fff" : plan.accent,
+                        border: plan.popular
+                          ? "none"
+                          : `1.5px solid ${plan.accent}40`,
+                        boxShadow: plan.popular
+                          ? `0 4px 16px ${plan.accent}30`
+                          : "none",
+                      }}
+                    >
+                      {plan.cta}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-[#2b2a35]/40 group-hover:text-[#2b2a35] transition-colors mt-1" />
-              </div>
-              <p className="text-sm text-[#6b6776] mt-3 leading-relaxed">{card.desc}</p>
-              <div className="mt-3 text-[10px] font-bold text-[#6b6776] uppercase tracking-wider font-hand">
-                {card.lessons} lessons
-              </div>
-            </button>
-          ))}
+              ))}
+            </div>
+
+            <div className="mt-8 text-center space-y-2">
+              <p
+                className="text-sm font-medium"
+                style={{ color: T.textSecondary }}
+              >
+                Engineering Lifetime Access:{" "}
+                <span className="font-bold" style={{ color: T.text }}>
+                  &#8377;2,999
+                </span>{" "}
+                one-time payment
+              </p>
+              <p className="text-xs" style={{ color: T.textMuted }}>
+                Pay via Dodo Payments &middot; UPI, cards, net banking,
+                international &middot; Cancel anytime
+              </p>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ---------- Meet the characters ---------- */}
-      <section className="max-w-3xl mx-auto px-4 pb-24">
-        <div className="card-sketchy p-7 sm:p-9" style={{ background: "#fff8e7" }}>
-          <h2 className="font-hand text-3xl font-bold text-[#2b2a35] text-center mb-6">
-            Meet Your <span className="marker-highlight-coral">Guides</span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="flex gap-3 items-start">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2b2a35]"
-                style={{ background: "var(--accent-coral)" }}
-              >
-                <span className="text-2xl">&#x1F63B;</span>
+      {/* ==================== FOOTER ==================== */}
+      <footer
+        className="py-12"
+        style={{ background: "#1A1D26" }}
+        role="contentinfo"
+      >
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-8">
+            <div className="flex flex-col items-center sm:items-start gap-2">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center"
+                  style={{ background: "#E76F51" }}
+                >
+                  <PandaLogo size={15} />
+                </div>
+                <span
+                  className="text-base font-bold text-white tracking-tight"
+                  style={headingFont}
+                >
+                  Red Panda Learn
+                </span>
               </div>
-              <div>
-                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Aru</h3>
-                <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
-                  A curious student just like you. Aru asks the questions you&apos;d ask &mdash; and discovers
-                  AI through cricket, Netflix, Instagram, and daily adventures.
-                </p>
-              </div>
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+                Visual CS education for everyone.
+              </p>
             </div>
-            <div className="flex gap-3 items-start">
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-2 border-[#2b2a35]"
-                style={{ background: "var(--accent-peach)" }}
-              >
-                <span className="text-2xl">&#x1F43C;</span>
-              </div>
-              <div>
-                <h3 className="font-hand text-xl font-bold text-[#2b2a35]">Riku</h3>
-                <p className="text-sm text-[#6b6776] leading-relaxed mt-0.5">
-                  Your AI companion &mdash; a witty red panda who narrates lessons, drops memes, roasts wrong
-                  answers (kindly), and celebrates every win with you.
-                </p>
-              </div>
+
+            <div className="flex items-center gap-8">
+              {[
+                { label: "Tracks", href: "#tracks" },
+                { label: "Pricing", href: "#pricing" },
+                {
+                  label: "Contact",
+                  href: "mailto:contact@redpandalearn.com",
+                },
+              ].map((link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className="text-sm font-medium transition-colors duration-200 hover:text-white"
+                  style={{ color: "rgba(255,255,255,0.4)" }}
+                >
+                  {link.label}
+                </a>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ---------- Footer CTA ---------- */}
-      <section className="py-16 notebook-grid border-y-2 border-[#2b2a35]">
-        <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="font-hand text-4xl font-bold text-[#2b2a35]">Ready to begin?</h2>
-          <p className="text-[#6b6776] text-lg mt-3">
-            Start from Level 1 and work your way up. It&apos;s free and fun!
-          </p>
-          <button
-            onClick={() => {
-              playClick();
-              router.push("/level1/machines");
-            }}
-            className="btn-sketchy mt-8 text-lg"
+          <div
+            className="mt-8 pt-8 text-center"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
           >
-            <Play className="w-4 h-4" />
-            Start Level 1
-          </button>
-        </div>
-      </section>
-
-      {/* ---------- Footer ---------- */}
-      <footer className="py-8 bg-[#2b2a35]">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-[#fdfbf6]">
-            <Brain className="w-5 h-5" style={{ color: "var(--accent-yellow)" }} />
-            <span className="font-hand text-xl font-bold">Red Panda Learn</span>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+              &copy; 2026 Red Panda Learn. All rights reserved.
+            </p>
           </div>
-          <p className="text-[#fdfbf6]/60 text-xs font-hand">
-            AI Education for Class 8&ndash;12 &middot; CBSE &middot; ICSE &middot; State Boards
-          </p>
         </div>
       </footer>
     </div>

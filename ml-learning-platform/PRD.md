@@ -114,7 +114,7 @@
 | 33 | Suggested Frontend Modules | ✅ | Component library, utilities, state stores, viz libraries — all shipped. |
 | 34 | Suggested Mobile (PWA) Architecture | ❌ | Not a PWA. No `manifest.json`, no service worker, no offline support, not installable, no push notifications. |
 | 35 | Suggested AI Features | ❌ | No real AI. Riku is canned. No LLM-graded project reviews, no adaptive difficulty, no personalized lesson recommendations, no generated practice questions. |
-| 36 | Suggested APIs & Integrations | ❌ | None. No Razorpay, no Google OAuth, no email provider, no analytics SDK, no CDN, no MediaPipe beyond the in-browser hand tracking lessons. |
+| 36 | Suggested APIs & Integrations | ❌ | None. Dodo Payments not yet integrated, no Google OAuth, no email provider, no analytics SDK, no CDN, no MediaPipe beyond the in-browser hand tracking lessons. |
 | 37 | Non-functional Requirements | ❌ | No test suite, no CI, no performance budget tracked, no accessibility audit, no i18n (English only), no error monitoring (Sentry etc.), no performance monitoring. |
 
 #### Business & Go-to-Market (§38–§43)
@@ -144,7 +144,7 @@
 1. **Backend + accounts (§31, §32)** — unblocks everything else (real leaderboard, cross-device sync, payments, analytics, school features). Highest-leverage gap.
 2. **LLM-backed Riku (§16, §35)** — replace canned responses with a real LLM contract. Upgrades the core "companion" promise.
 3. **Class 8, 10, 11, 12 content (§11, §12)** — 4× content team effort. Currently only 1/5 of the target audience is served.
-4. **Payments + freemium gate (§38, §39)** — required for revenue. Razorpay integration + feature flags.
+4. **Payments (§38, §39)** — Dodo Payments integration for unified ₹249/month subscription + feature flags.
 5. **Parent & teacher dashboards (§29, §41)** — required for school GTM and parent-driven subscriptions.
 6. **PWA + offline (§34)** — mobile-first India market needs installable + low-bandwidth offline mode.
 7. **Analytics + KPI instrumentation (§37, §43)** — cannot improve what you cannot measure.
@@ -217,27 +217,37 @@ Weighted against the PRD's full surface area (excluding pure narrative sections)
 
 ## 1. Executive Summary
 
-**Red Panda Learn** is an AI literacy platform for Indian students in Class 8–12, designed to make artificial intelligence education fun, visual, story-driven, and deeply engaging — not another boring coding course.
+**Red Panda Learn** is a unified tech education platform for students worldwide — from Class 8 school students learning AI basics to B.Tech CSE students mastering data structures, networking, and operating systems, to job seekers preparing for GATE and placement interviews.
 
-The platform covers CBSE, ICSE, and State Board curricula while going far beyond what schools teach. It combines the addictive learning loops of **Duolingo**, the immersive world-building of **Roblox**, the binge-worthy content design of **Netflix**, and the structured knowledge management of **Notion** — all focused on AI education.
+The platform combines the addictive learning loops of **Duolingo**, the interactive visualizations of **VisuAlgo**, the structured progression of **Neetcode**, and the accessibility of **Khan Academy** — applied to the entire spectrum of computer science and AI education.
+
+**Two tracks, one platform:**
+
+| Track | Audience | Subjects |
+|---|---|---|
+| **School** | Class 8–12 students (CBSE/ICSE/State Boards) | AI & ML fundamentals (currently shipped for Class 9) |
+| **Engineering** | B.Tech CSE students, GATE aspirants, placement seekers | DSA, Computer Networks, Operating Systems, DBMS, OOP (see [PRD-ENGINEERING.md](PRD-ENGINEERING.md)) |
 
 **What Red Panda Learn is NOT:**
-- Not a coding bootcamp
+- Not a coding bootcamp or IDE
 - Not a lecture-based video platform
 - Not another BYJU'S clone
 - Not a textbook digitized into an app
 
 **What Red Panda Learn IS:**
-- A story-first, meme-heavy, gamified AI learning experience
-- Personalized by class level (8, 9, 10, 11, 12)
-- Built around curiosity, real-world examples, ethics, and practical exposure
-- Powered by a real AI companion (LLM-backed) that guides, explains, roasts, and celebrates
-- Available as a Progressive Web App on both web and mobile
-- Freemium with B2C subscriptions and school partnerships
+- A visualization-first, interactive learning platform for all of computer science
+- Split into School track (Class 8–12) and Engineering track (B.Tech CSE + GATE + Placements)
+- Built around interactive algorithm visualizations, step-through debuggers, and hands-on exploration
+- Language-agnostic pseudocode for all examples (no language lock-in)
+- Global audience, English only
+- Free tier + ₹249/month (Engineering) / ��449/month (School) / ₹2,999 lifetime, via Dodo Payments
+- 2-day free trial for all paid plans
 
-**Current Status:** ~20% built. The existing platform has 36 interactive lessons across 9 levels covering ML fundamentals (Class 9 level), built on Next.js + React + TypeScript with a sketchy notebook aesthetic, basic gamification, and spaced repetition. This PRD defines the remaining 80% — expanding to 5 class levels, adding backend infrastructure, AI companion, gamification engine, project system, career guidance, exam prep, and the full content library.
+**Current Status (this PRD — School/AI track):** ~30-35% of this PRD's scope is built. The existing platform has 45 interactive lessons across 9 levels covering ML fundamentals (Class 9), gamification engine, dashboard, Riku companion (canned), projects, exam prep, career roadmap, leaderboard, and certificates — all frontend-only with localStorage. See Implementation Log above and Section Status Matrix for details.
 
-**Market Opportunity:** India has 250M+ students in Classes 8–12. CBSE made Computational Thinking & AI mandatory from 2026-27. ICSE has zero AI content. Most schools lack teachers trained in AI. Parents are spending ₹2,000–₹15,000/year on edtech. The gap between what boards teach and what students need to know about AI is massive and growing.
+**Engineering track:** Defined in a separate PRD ([PRD-ENGINEERING.md](PRD-ENGINEERING.md)) covering DSA, Computer Networks, OS, DBMS, and OOP with full GATE + placement syllabus mapping.
+
+**Market Opportunity:** 250M+ students in Indian Classes 8–12 (CBSE made AI mandatory from 2026-27). 4M+ B.Tech CSE students enrolled annually in India alone. 900K+ GATE CS aspirants/year. Global CS education market growing at 18% CAGR. Current options are either too expensive (BYJU'S at ₹2,000-5,000/month), too dry (textbooks), or too narrow (Leetcode = only DSA). We serve the full stack at ₹249/month.
 
 ---
 
@@ -529,7 +539,7 @@ Most AI content is Western-centric. Examples feature Amazon, Uber, Silicon Valle
 | **Cultural context** | Western examples | India-first (cricket, Bollywood, Zomato, UPI, IPL) |
 | **Exam prep** | Separate product | Integrated board exam mode |
 | **Projects** | Individual homework | Individual + team projects with social features (share, like, compete) |
-| **Price** | ₹500-₹12,000/month | Freemium (free tier + ₹149-₹499/month premium) |
+| **Price** | ₹500-₹12,000/month | Free tier + ₹249-449/month premium (2-day trial) |
 | **Platform** | Separate web + app | Single PWA (works everywhere) |
 
 ### The "10x Better" Test
@@ -538,7 +548,7 @@ For Red Panda Learn to win, it must be **10x better** than alternatives on at le
 
 1. **10x more engaging:** Duolingo-level addictiveness with stories, memes, and AI companion
 2. **10x more age-appropriate:** 5 distinct class tracks vs. one-size-fits-all
-3. **10x more accessible:** ₹149/month PWA vs. ₹6,000/month coding classes
+3. **10x more accessible:** ₹249/month (all access) vs. ₹6,000/month coding classes
 
 ---
 
@@ -2479,7 +2489,7 @@ Red Panda Learn
 | **Project Service** | Project CRUD, submissions, gallery, likes, comments, teams | POST /projects, GET /projects/gallery, POST /projects/:id/like |
 | **AI Companion Service** | LLM integration, context building, guardrails, chat history | POST /companion/chat, GET /companion/history |
 | **Exam Prep Service** | Question banks by board/chapter, paper generation, scoring | GET /exam-prep/chapters, POST /exam-prep/submit |
-| **Payment Service** | Razorpay integration, subscription management, invoicing | POST /payments/subscribe, POST /payments/webhook |
+| **Payment Service** | Dodo Payments integration, subscription management, invoicing | POST /payments/subscribe, POST /payments/webhook |
 | **Notification Service** | Push notifications (PWA), email, in-app notifications | POST /notifications/send, GET /notifications |
 | **Certificate Service** | Generate, store, verify certificates | POST /certificates/generate, GET /certificates/verify/:code |
 | **Admin Service** | Teacher dashboard, school management, content management | GET /admin/school/:id/students, POST /admin/content |
@@ -2494,7 +2504,7 @@ Red Panda Learn
 | **ORM** | Prisma | Type-safe database access, migrations |
 | **Auth** | NextAuth.js / Clerk | Google OAuth, phone OTP, JWT |
 | **LLM API** | Anthropic Claude API | AI companion (Haiku for simple, Sonnet for complex) |
-| **Payments** | Razorpay | Indian payment gateway, UPI support |
+| **Payments** | Dodo Payments | Indian payment gateway, UPI support |
 | **Email** | Resend / AWS SES | Transactional emails |
 | **Push** | Web Push API | PWA push notifications |
 | **Caching** | Redis (Upstash) | Serverless-compatible Redis |
@@ -2685,7 +2695,7 @@ Build a consistent design system with these base components:
 | API | Purpose | Priority |
 |---|---|---|
 | **Anthropic Claude API** | AI companion (Haiku + Sonnet) | MVP |
-| **Razorpay** | Payment processing (UPI, cards, net banking) | MVP |
+| **Dodo Payments** | Payment processing (UPI, cards, net banking) | MVP |
 | **Google OAuth** | Social sign-in | MVP |
 | **Firebase Auth** | Phone OTP authentication | MVP |
 | **Resend / AWS SES** | Transactional email | MVP |
@@ -2718,7 +2728,7 @@ Build a consistent design system with these base components:
 
 | Webhook | Trigger | Action |
 |---|---|---|
-| Razorpay → Platform | Payment success/failure | Update subscription status |
+| Dodo Payments → Platform | Payment success/failure | Update subscription status |
 | Platform → Email | Lesson complete, badge earned | Send celebration email |
 | Platform → Push | Streak at risk, new challenge | Send push notification |
 | Platform → Analytics | Any user action | Log event for analysis |
@@ -2768,7 +2778,7 @@ Build a consistent design system with these base components:
 | **Data encryption** | TLS 1.3 in transit, AES-256 at rest |
 | **PII protection** | Minimal PII collection, encrypted storage, DPDP Act compliance |
 | **Child safety** | COPPA-like protections for under-16, parental consent for chat |
-| **Payment security** | PCI DSS via Razorpay (no card data stored) |
+| **Payment security** | PCI DSS via Dodo Payments (no card data stored) |
 | **API security** | Rate limiting, input validation, CORS, CSRF protection |
 | **Dependency security** | Automated vulnerability scanning (Snyk/Dependabot) |
 | **Penetration testing** | Annual third-party pen test |
@@ -2843,40 +2853,68 @@ Revenue
 
 ## 39. Pricing Strategy
 
-### 39.1 B2C Pricing
+### 39.1 Tiered Pricing
 
-| Plan | Price | Billing | Savings |
-|---|---|---|---|
-| **Monthly** | ₹299/month | Monthly | — |
-| **Quarterly** | ₹249/month | ₹747 quarterly | 17% off |
-| **Annual** | ₹149/month | ₹1,788 annually | 50% off |
-| **Family Plan** | ₹399/month (up to 3 children) | Monthly or annual | 55% off per child |
+| Plan | Audience | Monthly | Annual | Notes |
+|---|---|---|---|---|
+| **Free Tier** | Everyone | ₹0 | ₹0 | First 3 lessons per subject + limited quizzes + community access |
+| **School Premium** | Class 8-12 students | ₹449/month | ₹3,588/year (₹299/mo) | Full School track + AI companion + exam prep + certificates |
+| **Engineering Premium** | B.Tech / GATE / Placement | ₹249/month | ₹1,788/year (₹149/mo) | Full Engineering track + GATE mocks + placement prep + certificates |
+| **All Access Bundle** | Both tracks | ₹549/month | ₹4,188/year (₹349/mo) | Everything on the platform |
+| **Engineering Lifetime** | One-time purchase | ₹2,999 one-time | — | Lifetime access to full Engineering track |
 
-### 39.2 Pricing Rationale
+**Free trial:** 2-day full access trial for all paid plans (no credit card required).
 
-- **₹149-299/month** is in the "impulse buy" range for Indian middle-class parents
-- Significantly cheaper than WhiteHat Jr (₹6,000-12,000/month) and BYJU'S (₹2,000-5,000/month)
-- Competitive with Netflix (₹199-499/month) and Spotify (₹119-179/month)
-- Annual plan aggressively priced (₹1,788/year = ₹5/day) for maximum adoption
-- Family plan incentivizes siblings to join
+### 39.2 Free Tier Details
 
-### 39.3 School Pricing
+What's free (forever, no card required):
+- First 3 lessons of every subject (School + Engineering)
+- Basic quizzes after free lessons
+- Community forum access
+- Limited Riku AI responses (5/day)
+- View leaderboard (can't participate)
+- View career roadmap (overview only)
+
+What's locked behind premium:
+- All remaining lessons + visualizations
+- Full GATE mock tests + previous year papers
+- Placement prep (company-specific paths)
+- Certificates (downloadable PDF)
+- Unlimited Riku AI companion
+- Progress sharing on LinkedIn/Instagram
+- Browser extension (Leetcode hints)
+- Video explanations alongside visualizations
+- Exam prep (school board / university semester)
+
+### 39.3 Pricing Rationale
+
+- **₹249/month Engineering** targets college students who spend ₹500-2000/month on Unacademy/Coding Ninjas — we're significantly cheaper
+- **₹449/month School** targets parents who spend ₹2,000-15,000/month on BYJU'S/WhiteHat Jr — we're 5-30x cheaper
+- **₹2,999 Lifetime Engineering** creates urgency ("pay once, never again") and is attractive for placement-focused students who need it for 6-12 months
+- **Annual discounts (33-40% off)** reward commitment and reduce churn
+- **Free tier** is the growth engine — users experience the product, get hooked on visualizations, hit the paywall on lesson 4
+- **2-day trial** lets serious users test everything before committing
+- Payment via **Dodo Payments** (supports UPI, cards, net banking, international cards)
+
+### 39.4 B2B / Institutional Pricing
 
 | Plan | Price | Includes |
 |---|---|---|
-| **Per Student** | ₹100/student/month (min 50 students) | Full platform access + teacher dashboard |
-| **School-wide** | ₹50,000-₹2,00,000/year (based on school size) | All students + teachers + admin |
-| **District/Group** | Custom pricing | Multi-school licensing + training |
+| **College Bulk** | ₹100/student/month (min 100 students) | Full Engineering track + teacher dashboard + analytics |
+| **School Bulk** | ₹150/student/month (min 50 students) | Full School track + teacher dashboard + parent reports |
+| **Institution-wide** | ₹50,000-₹3,00,000/year (based on size) | All students + faculty + admin + custom branding |
+| **Coaching Institute** | Custom pricing | White-label option + custom question banks |
 
-### 39.4 Promotional Pricing
+### 39.5 Promotional Pricing
 
 | Promotion | Details |
 |---|---|
-| **Launch offer** | First 3 months at ₹99/month |
-| **Referral** | Get 1 month free for each friend who subscribes |
-| **School discount** | Students from partner schools get 30% off B2C premium |
-| **Merit scholarship** | Top 100 students nationally get free premium for 1 year |
-| **Financial aid** | 50% discount for students from low-income backgrounds (verified) |
+| **Launch offer** | First 1000 users get lifetime Engineering access at ₹999 (67% off) |
+| **Referral** | Give ₹100 credit, get ₹100 credit for each referral who subscribes |
+| **Campus Ambassador** | Free premium access + ₹50/referral for college ambassadors |
+| **Merit scholarship** | Top 100 GATE scorers on platform get free premium for 1 year |
+| **Financial aid** | 50% discount for students from low-income backgrounds (verified via college ID) |
+| **Seasonal sales** | Diwali, New Year, exam season (May/June) — 30-50% off annual plans |
 
 ---
 
@@ -3103,7 +3141,7 @@ This metric captures both engagement (are users coming back?) and depth (are the
 | **Review** | Spaced repetition system | Custom cards, export |
 | **Career** | Overview page with 10 career descriptions | Full roadmaps, college finder, career quiz |
 | **Auth** | Google OAuth + email signup | Phone OTP, school SSO |
-| **Payment** | Razorpay (monthly + annual plans) | Family plans, school billing |
+| **Payment** | Dodo Payments (monthly + annual plans) | Family plans, school billing |
 | **Platform** | Web (responsive) + PWA basics | Full offline mode, push notifications |
 | **Admin** | Basic analytics dashboard | Teacher dashboard, school admin, content manager |
 | **AI** | Claude Haiku for companion, Sonnet for complex Q&A | Adaptive learning, content generation, project evaluation |

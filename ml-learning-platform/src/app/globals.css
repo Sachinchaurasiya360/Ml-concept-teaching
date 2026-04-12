@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Kalam:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Outfit:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
 
 /* ---------- Theme tokens (sketchy notebook) ---------- */
@@ -228,3 +229,76 @@ html, body {
   stroke-dasharray: 300;
   animation: draw-line 0.8s ease-out forwards;
 }
+
+/* ---------- Landing page (light Skilly-inspired theme) ---------- */
+
+/* Hero floating cards */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+.hero-float { animation: hero-float 4s ease-in-out infinite; }
+
+/* Hero node pop-in */
+@keyframes hero-node-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.hero-node-pop { animation: hero-node-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Hero line draw */
+@keyframes hero-line-draw {
+  from { stroke-dashoffset: 300; opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+.hero-line-draw {
+  stroke-dasharray: 300;
+  animation: hero-line-draw 0.8s ease-out both;
+}
+
+/* Hero pulse glow */
+@keyframes hero-pulse-anim {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%      { opacity: 1; transform: scale(1.6); }
+}
+.hero-pulse { animation: hero-pulse-anim 2.5s ease-in-out infinite; }
+
+/* Slow spin for dashed circle */
+@keyframes hero-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.hero-spin-slow { animation: hero-spin-slow 30s linear infinite; }
+
+/* Underline draw for "courses" */
+@keyframes hero-underline {
+  from { stroke-dashoffset: 250; }
+  to   { stroke-dashoffset: 0; }
+}
+.hero-underline-draw {
+  stroke-dasharray: 250;
+  animation: hero-underline 1s ease-out 0.6s both;
+}
+
+/* Neural network node pulse */
+@keyframes hero-nn-glow {
+  0%, 100% { filter: none; }
+  50%      { filter: drop-shadow(0 0 6px currentColor); }
+}
+.hero-nn-node { animation: hero-nn-glow 2s ease-in-out infinite; }
+
+/* Binary tree BFS traversal highlight */
+@keyframes hero-tree-bfs {
+  0%, 100% { fill: rgba(29,192,113,0.08); stroke: rgba(29,192,113,0.3); stroke-width: 2; }
+  14%      { fill: rgba(29,192,113,0.4); stroke: #1DC071; stroke-width: 3; filter: drop-shadow(0 0 10px rgba(29,192,113,0.4)); }
+  28%      { fill: rgba(29,192,113,0.08); stroke: rgba(29,192,113,0.3); stroke-width: 2; filter: none; }
+}
+.hero-tree-node { animation: hero-tree-bfs 3.5s ease-in-out infinite; }
+
+/* Graph BFS wave highlight */
+@keyframes hero-graph-bfs {
+  0%, 100% { fill: rgba(236,72,153,0.06); stroke: rgba(236,72,153,0.25); stroke-width: 2; }
+  12%      { fill: rgba(236,72,153,0.35); stroke: #EC4899; stroke-width: 3; filter: drop-shadow(0 0 10px rgba(236,72,153,0.35)); }
+  25%      { fill: rgba(236,72,153,0.06); stroke: rgba(236,72,153,0.25); stroke-width: 2; filter: none; }
+}
+.hero-graph-node { animation: hero-graph-bfs 3.5s ease-in-out infinite; }
